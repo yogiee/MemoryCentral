@@ -2,9 +2,10 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { spawn } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { homedir } from 'os';
 import { openDb } from './db.js';
 import { embed, cosineSimilarity } from './ollama.js';
 
@@ -12,6 +13,22 @@ const __dirname    = dirname(fileURLToPath(import.meta.url));
 const REPO         = join(__dirname, '..');
 const DASHBOARD    = join(REPO, 'dashboard', 'DASHBOARD.md');
 const SYNC_SCRIPT  = join(REPO, 'sync.sh');
+const HOME         = homedir();
+
+function memoryType(filename) {
+  for (const t of ['feedback', 'project', 'user', 'reference']) {
+    if (filename.startsWith(t)) return t;
+  }
+  return 'general';
+}
+
+function extractTitle(content, filename) {
+  const fm = content.match(/^---[\s\S]*?\nname:\s*(.+)/m);
+  if (fm) return fm[1].trim();
+  const h1 = content.match(/^#\s+(.+)/m);
+  if (h1) return h1[1].trim();
+  return filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+}
 
 const db = openDb();
 
@@ -208,6 +225,63 @@ server.registerTool(
     ].join('\n')).join('\n\n---\n\n');
 
     return { content: [{ type: 'text', text: `# Similar to "${description}"\n\n${text}` }] };
+  },
+);
+
+server.registerTool(
+  'save_memory',
+  {
+    description: 'Write a memory entry to a project — saves to both the filesystem and the knowledge DB with embeddings. Use mid-session to persist discoveries, decisions, or context without waiting for the next sync.',
+    inputSchema: z.object({
+      project:  z.string().describe('Exact project name as shown in list_projects (e.g. "IPMSGX")'),
+      filename: z.string().describe('Memory filename e.g. "feedback_auth.md", "project_decisions.md"'),
+      content:  z.string().describe('Full markdown content — include frontmatter if applicable'),
+    }),
+  },
+  async ({ project, filename, content }) => {
+    const p = db.prepare('SELECT * FROM projects WHERE name=?').get(project);
+    if (!p) {
+      return {
+        content: [{ type: 'text', text: `Project "${project}" not found. Run the "sync" tool first to register it, then retry.` }],
+        isError: true,
+      };
+    }
+
+    const memDir = join(HOME, '.claude', 'projects', p.encoded_path, 'memory');
+    mkdirSync(memDir, { recursive: true });
+    writeFileSync(join(memDir, filename), content);
+
+    const type     = memoryType(filename);
+    const title    = extractTitle(content, filename);
+    const now      = new Date().toISOString();
+    const existing = db.prepare('SELECT id, content FROM memories WHERE project_id=? AND filename=?').get(p.id, filename);
+
+    let memId;
+    if (!existing) {
+      const { id } = db.prepare(
+        'INSERT INTO memories (project_id, filename, memory_type, title, content, synced_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id'
+      ).get(p.id, filename, type, title, content, now);
+      db.prepare('INSERT INTO memories_fts (rowid, title, content, project_name, memory_type) VALUES (?, ?, ?, ?, ?)').run(id, title, content, project, type);
+      memId = id;
+    } else if (existing.content !== content) {
+      db.prepare('UPDATE memories SET memory_type=?, title=?, content=?, synced_at=? WHERE id=?').run(type, title, content, now, existing.id);
+      db.prepare('DELETE FROM memories_fts WHERE rowid=?').run(existing.id);
+      db.prepare('INSERT INTO memories_fts (rowid, title, content, project_name, memory_type) VALUES (?, ?, ?, ?, ?)').run(existing.id, title, content, project, type);
+      memId = existing.id;
+    } else {
+      return { content: [{ type: 'text', text: `"${filename}" in ${project} is already up-to-date.` }] };
+    }
+
+    try {
+      const vec = await embed(`${title}\n\n${content}`.slice(0, 2000));
+      db.prepare(`
+        INSERT INTO embeddings (memory_id, vector, model, generated_at) VALUES (?, ?, 'nomic-embed-text', ?)
+        ON CONFLICT(memory_id) DO UPDATE SET vector=excluded.vector, generated_at=excluded.generated_at
+      `).run(memId, JSON.stringify(vec), now);
+    } catch { /* non-fatal if Ollama is down */ }
+
+    const action = existing ? 'Updated' : 'Created';
+    return { content: [{ type: 'text', text: `${action} "${filename}" in ${project}.\nWritten to: ${join(memDir, filename)}` }] };
   },
 );
 
