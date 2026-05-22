@@ -36,11 +36,11 @@ const db = openDb();
 // Tools
 // ---------------------------------------------------------------------------
 
-const server = new McpServer({ name: 'memory-central', version: '2.0.0' });
+const server = new McpServer({ name: 'memoryCentral', version: '2.0.0' });
 
-server.registerTool(
+server.tool(
   'list_projects',
-  { description: 'List all tracked projects with description, stack, and memory count.' },
+  'List all tracked projects with description, stack, and memory count.',
   async () => {
     const projects = db.prepare(`
       SELECT p.name, p.description, p.stack, p.last_synced, COUNT(m.id) AS mem_count
@@ -62,12 +62,10 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+server.tool(
   'get_project_summary',
-  {
-    description: 'Structured summary of a project: description, stack, all memory titles grouped by type.',
-    inputSchema: z.object({ project: z.string() }),
-  },
+  'Structured summary of a project: description, stack, all memory titles grouped by type.',
+  { project: z.string() },
   async ({ project }) => {
     const p = db.prepare('SELECT * FROM projects WHERE name=?').get(project);
     if (!p) return { content: [{ type: 'text', text: `Project "${project}" not found.` }], isError: true };
@@ -99,12 +97,10 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+server.tool(
   'get_project_memories',
-  {
-    description: 'Full content of all memory files for a project.',
-    inputSchema: z.object({ project: z.string() }),
-  },
+  'Full content of all memory files for a project.',
+  { project: z.string() },
   async ({ project }) => {
     const p = db.prepare('SELECT id FROM projects WHERE name=?').get(project);
     if (!p) return { content: [{ type: 'text', text: `Project "${project}" not found.` }], isError: true };
@@ -121,14 +117,12 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+server.tool(
   'search_memories',
+  'Full-text search across all project memories using FTS5. Optionally filter by project.',
   {
-    description: 'Full-text search across all project memories using FTS5. Optionally filter by project.',
-    inputSchema: z.object({
-      query:   z.string().describe('Search terms'),
-      project: z.string().optional().describe('Limit to a specific project name (optional)'),
-    }),
+    query:   z.string().describe('Search terms'),
+    project: z.string().optional().describe('Limit to a specific project name (optional)'),
   },
   async ({ query, project }) => {
     let sql = `
@@ -161,12 +155,10 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+server.tool(
   'find_by_stack',
-  {
-    description: 'Find all projects using a specific technology. Use lowercase tags e.g. swift, node, python.',
-    inputSchema: z.object({ stack: z.string() }),
-  },
+  'Find all projects using a specific technology. Use lowercase tags e.g. swift, node, python.',
+  { stack: z.string() },
   async ({ stack }) => {
     const projects = db.prepare(`
       SELECT p.name, p.description, p.stack, COUNT(m.id) AS mem_count
@@ -187,14 +179,12 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+server.tool(
   'find_similar',
+  'Semantic search: find memory entries similar to a description using embeddings. Best for conceptual lookups like "how we handled auth" or "scroll component implementation".',
   {
-    description: 'Semantic search: find memory entries similar to a description using embeddings. Best for conceptual lookups like "how we handled auth" or "scroll component implementation".',
-    inputSchema: z.object({
-      description: z.string().describe('Describe what you are looking for'),
-      limit:       z.number().default(5),
-    }),
+    description: z.string().describe('Describe what you are looking for'),
+    limit:       z.number().optional().describe('Max results (default 5)'),
   },
   async ({ description, limit = 5 }) => {
     let queryVec;
@@ -228,15 +218,13 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+server.tool(
   'save_memory',
+  'Write a memory entry to a project — saves to both the filesystem and the knowledge DB with embeddings. Use mid-session to persist discoveries, decisions, or context without waiting for the next sync.',
   {
-    description: 'Write a memory entry to a project — saves to both the filesystem and the knowledge DB with embeddings. Use mid-session to persist discoveries, decisions, or context without waiting for the next sync.',
-    inputSchema: z.object({
-      project:  z.string().describe('Exact project name as shown in list_projects (e.g. "IPMSGX")'),
-      filename: z.string().describe('Memory filename e.g. "feedback_auth.md", "project_decisions.md"'),
-      content:  z.string().describe('Full markdown content — include frontmatter if applicable'),
-    }),
+    project:  z.string().describe('Exact project name as shown in list_projects (e.g. "IPMSGX")'),
+    filename: z.string().describe('Memory filename e.g. "feedback_auth.md", "project_decisions.md"'),
+    content:  z.string().describe('Full markdown content — include frontmatter if applicable'),
   },
   async ({ project, filename, content }) => {
     const p = db.prepare('SELECT * FROM projects WHERE name=?').get(project);
@@ -285,9 +273,9 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+server.tool(
   'get_dashboard',
-  { description: 'Cross-project dashboard grouped by tech stack.' },
+  'Cross-project dashboard grouped by tech stack.',
   async () => {
     if (!existsSync(DASHBOARD)) {
       return { content: [{ type: 'text', text: 'Dashboard not found — run ./sync.sh first.' }], isError: true };
@@ -296,9 +284,9 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+server.tool(
   'sync',
-  { description: 'Trigger a memory sync from all Claude project sessions without committing to git.' },
+  'Trigger a memory sync from all Claude project sessions without committing to git.',
   async () => new Promise(resolve => {
     const proc = spawn('bash', [SYNC_SCRIPT, '--no-commit'], { stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '';
