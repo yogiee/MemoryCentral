@@ -2,7 +2,7 @@
 
 **Description:** Design patterns and conventions for writing HA automations, including readability and portability best practices.
 **Stack:** homeassistant, yaml, swiftui
-**Last synced:** 2026-05-22T09:30:38.569Z
+**Last synced:** 2026-05-22T11:21:29.043Z
 
 ## Memories
 
