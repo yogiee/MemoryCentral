@@ -92,7 +92,7 @@ function writeDashboard(db) {
     (byStack[key] = byStack[key] || []).push(p);
   }
 
-  for (const [tag, projs] of Object.entries(byStack).sort()) {
+  for (const [tag, projs] of Object.entries(byStack).sort((a, b) => a[0].localeCompare(b[0]))) {
     lines.push(`## ${tag}`);
     lines.push('');
     for (const p of projs) {
