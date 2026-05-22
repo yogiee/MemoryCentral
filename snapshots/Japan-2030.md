@@ -2,7 +2,7 @@
 
 **Description:** Planning a Japan trip for 6-10 friends in October 2030, focusing on tourist circuit and budget-mixed accommodations.
 **Stack:** swift, node, typescript, react, electron
-**Last synced:** 2026-05-22T11:21:29.043Z
+**Last synced:** 2026-05-22T13:10:54.273Z
 
 ## Memories
 

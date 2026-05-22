@@ -2,7 +2,7 @@
 
 **Description:** Swift/SwiftUI port of IP Messenger (LAN messaging protocol) for macOS.
 **Stack:** swift, swiftui
-**Last synced:** 2026-05-22T11:21:29.043Z
+**Last synced:** 2026-05-22T13:10:54.273Z
 
 ## Memories
 

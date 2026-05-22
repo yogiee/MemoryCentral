@@ -2,7 +2,7 @@
 
 **Description:** User avoids hyphens in new project directory names to prevent Claude path-encoding ambiguity
 **Stack:** node, bash
-**Last synced:** 2026-05-22T11:21:29.043Z
+**Last synced:** 2026-05-22T13:10:54.273Z
 
 ## Memories
 

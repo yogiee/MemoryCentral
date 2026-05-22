@@ -51,7 +51,8 @@ Add to `~/.claude/settings.json`:
 ```json
 {
   "mcpServers": {
-    "memory-central": {
+    "memoryCentral": {
+      "type": "stdio",
       "command": "/opt/homebrew/bin/node",
       "args": ["/absolute/path/to/MemoryCentral/server/index.js"]
     }
@@ -85,13 +86,13 @@ Create `~/.claude/CLAUDE.md` with the following content. This file is loaded int
 ## MemoryCentral — Cross-Project Knowledge Bank
 
 All local Claude projects are indexed in a central SQLite DB with FTS and semantic search.
-MCP server: `memory-central` (available in every session).
+MCP server: `memoryCentral` (available in every session).
 
 ### Search before researching
 
 When working on a technical problem — especially implementation patterns, architecture decisions,
 debugging approaches, or anything you might have solved in another project — call
-`memory-central:search_memories` or `memory-central:find_similar` first. Do this proactively
+`memoryCentral:search_memories` or `memoryCentral:find_similar` first. Do this proactively
 when starting research (web search, reading docs) to avoid repeating prior work.
 
 Good triggers:
@@ -102,10 +103,10 @@ Good triggers:
 ### Write memories via MCP
 
 When you save an important memory (feedback, architectural decision, key discovery), also call
-`memory-central:save_memory` so it's immediately searchable across all projects — don't wait
+`memoryCentral:save_memory` so it's immediately searchable across all projects — don't wait
 for the next sync. Use the same filename and content as the memory file you're writing.
 
-memory-central:save_memory({
+memoryCentral:save_memory({
   project:  "ExactProjectName",   // as shown in list_projects
   filename: "feedback_auth.md",
   content:  "---\nname: ...\n---\n\n..."
