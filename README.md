@@ -46,17 +46,23 @@ cd MemoryCentral
 npm install
 ```
 
-Add to `~/.claude/settings.json`:
+Register the MCP server globally using the CLI (**not** by editing `settings.json` — Claude Code reads global MCP servers from `~/.claude.json`):
+
+```bash
+claude mcp add --scope user memoryCentral /opt/homebrew/bin/node /absolute/path/to/MemoryCentral/server/index.js
+```
+
+Verify it connected:
+
+```bash
+claude mcp list
+# memoryCentral: /opt/homebrew/bin/node ... - ✓ Connected
+```
+
+Add the Stop hook to `~/.claude/settings.json` so the DB syncs after every session:
 
 ```json
 {
-  "mcpServers": {
-    "memoryCentral": {
-      "type": "stdio",
-      "command": "/opt/homebrew/bin/node",
-      "args": ["/absolute/path/to/MemoryCentral/server/index.js"]
-    }
-  },
   "hooks": {
     "Stop": [{
       "matcher": "",
