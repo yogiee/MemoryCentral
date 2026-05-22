@@ -1,8 +1,8 @@
 # Typa
 
-**Description:** _unknown_
-**Stack:** _unknown_
-**Last synced:** 2026-05-22T06:23:16.561Z
+**Description:** A project that resolves fixes for baselineOffset centering, gutter drift, and find-nav scroll-offset stale state in a text editor.
+**Stack:** swift, swiftui
+**Last synced:** 2026-05-22T09:30:38.569Z
 
 ## Memories
 

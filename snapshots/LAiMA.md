@@ -1,8 +1,8 @@
 # LAiMA
 
-**Description:** _unknown_
-**Stack:** _unknown_
-**Last synced:** 2026-05-22T06:54:44.146Z
+**Description:** A command-line interface for interacting with the LAiMA model, providing features such as menu-driven options and configuration management.
+**Stack:** python, typescript, react, electron, bash, homeassistant
+**Last synced:** 2026-05-22T09:30:38.569Z
 
 ## Memories
 

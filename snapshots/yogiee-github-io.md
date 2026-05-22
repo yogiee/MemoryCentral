@@ -1,8 +1,8 @@
 # yogiee-github-io
 
-**Description:** _unknown_
-**Stack:** _unknown_
-**Last synced:** 2026-05-22T06:23:16.561Z
+**Description:** A senior tricolor Beagle named Bugz is the hero image on yogiee.github.io and has her own Instagram account.
+**Stack:** node, html, css
+**Last synced:** 2026-05-22T09:30:38.569Z
 
 ## Memories
 

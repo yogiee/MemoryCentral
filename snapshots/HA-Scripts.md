@@ -1,8 +1,8 @@
 # HA-Scripts
 
-**Description:** _unknown_
-**Stack:** _unknown_
-**Last synced:** 2026-05-22T06:26:50.616Z
+**Description:** Design patterns and conventions for writing HA automations, including readability and portability best practices.
+**Stack:** homeassistant, yaml, swiftui
+**Last synced:** 2026-05-22T09:30:38.569Z
 
 ## Memories
 

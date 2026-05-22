@@ -1,8 +1,8 @@
 # Stardate
 
-**Description:** _unknown_
-**Stack:** _unknown_
-**Last synced:** 2026-05-22T06:23:16.561Z
+**Description:** A project management tool for tracking attendance and punctuality with features like Google OAuth, FullCalendar calendar page, and PWA manifest.
+**Stack:** swift, swiftui, node, typescript, python, react, electron, bash, homeassistant, go, rust, wordpress, html, css
+**Last synced:** 2026-05-22T09:30:38.569Z
 
 ## Memories
 

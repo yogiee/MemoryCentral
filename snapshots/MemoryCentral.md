@@ -1,8 +1,8 @@
 # MemoryCentral
 
-**Description:** _unknown_
-**Stack:** _unknown_
-**Last synced:** 2026-05-22T06:26:50.616Z
+**Description:** User avoids hyphens in new project directory names to prevent Claude path-encoding ambiguity
+**Stack:** node, bash
+**Last synced:** 2026-05-22T09:30:38.569Z
 
 ## Memories
 

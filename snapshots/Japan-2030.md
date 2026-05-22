@@ -1,8 +1,8 @@
 # Japan-2030
 
-**Description:** _unknown_
-**Stack:** _unknown_
-**Last synced:** 2026-05-22T06:54:44.146Z
+**Description:** Planning a Japan trip for 6-10 friends in October 2030, focusing on tourist circuit and budget-mixed accommodations.
+**Stack:** swift, node, typescript, react, electron
+**Last synced:** 2026-05-22T09:30:38.569Z
 
 ## Memories
 

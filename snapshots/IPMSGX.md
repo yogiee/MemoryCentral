@@ -1,8 +1,8 @@
 # IPMSGX
 
-**Description:** _unknown_
-**Stack:** _unknown_
-**Last synced:** 2026-05-22T06:26:50.616Z
+**Description:** Swift/SwiftUI port of IP Messenger (LAN messaging protocol) for macOS.
+**Stack:** swift, swiftui
+**Last synced:** 2026-05-22T09:30:38.569Z
 
 ## Memories
 

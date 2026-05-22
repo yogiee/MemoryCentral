@@ -1,8 +1,8 @@
 # inspector
 
-**Description:** _unknown_
-**Stack:** _unknown_
-**Last synced:** 2026-05-22T06:23:16.561Z
+**Description:** A project that integrates three Node.js sidecars with Laravel, each wrapping an official AI SDK for tasks such as Google search and OpenAI agents.
+**Stack:** node, typescript, laravel, swiftui, electron
+**Last synced:** 2026-05-22T09:30:38.569Z
 
 ## Memories
 
