@@ -52,7 +52,7 @@ Add to `~/.claude/settings.json`:
 {
   "mcpServers": {
     "memory-central": {
-      "command": "node",
+      "command": "/opt/homebrew/bin/node",
       "args": ["/absolute/path/to/MemoryCentral/server/index.js"]
     }
   },
