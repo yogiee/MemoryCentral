@@ -11,7 +11,7 @@ done
 echo "=== MemoryCentral Sync  $(date -u '+%Y-%m-%d %H:%M UTC') ==="
 echo ""
 
-node "${SCRIPT_DIR}/server/sync.js"
+/opt/homebrew/bin/node "${SCRIPT_DIR}/server/sync.js"
 
 if [[ "$NO_COMMIT" == false ]]; then
   changed="$(git -C "$SCRIPT_DIR" status --porcelain snapshots/ dashboard/ 2>/dev/null | wc -l | tr -d ' ')"
