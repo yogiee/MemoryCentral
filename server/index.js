@@ -7,12 +7,12 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
 import { openDb } from './db.js';
-import { embed, cosineSimilarity } from './ollama.js';
+import { embed, cosineSimilarity } from './embed.js';
 
 const __dirname    = dirname(fileURLToPath(import.meta.url));
 const REPO         = join(__dirname, '..');
 const DASHBOARD    = join(REPO, 'dashboard', 'DASHBOARD.md');
-const SYNC_SCRIPT  = join(REPO, 'sync.sh');
+const SYNC_SCRIPT  = join(REPO, 'sync.js');
 const HOME         = homedir();
 
 function memoryType(filename) {
@@ -187,26 +187,39 @@ server.tool(
     limit:       z.number().optional().describe('Max results (default 5)'),
   },
   async ({ description, limit = 5 }) => {
-    let queryVec;
-    try {
-      queryVec = await embed(description);
-    } catch {
-      return { content: [{ type: 'text', text: 'Ollama embedding service unavailable.' }], isError: true };
+    const embedResult = await embed(description);
+
+    // Tier 3: no embedding provider — return all content for in-context matching
+    if (!embedResult) {
+      const all = db.prepare(`
+        SELECT m.title, m.filename, m.content, m.memory_type, p.name AS project_name
+        FROM memories m JOIN projects p ON p.id = m.project_id
+        ORDER BY p.name, m.filename
+      `).all();
+      if (!all.length) return { content: [{ type: 'text', text: 'No memories found — run sync first.' }] };
+      const text = [
+        `No embedding provider available. Review the ${all.length} memories below and identify which best match: "${description}"`,
+        '',
+        ...all.map(r => `**${r.project_name}/${r.filename}** [${r.memory_type}]\n_${r.title}_\n${r.content.slice(0, 300)}${r.content.length > 300 ? '…' : ''}`),
+      ].join('\n\n---\n\n');
+      return { content: [{ type: 'text', text }] };
     }
 
+    const { vector: queryVec, model } = embedResult;
     const rows = db.prepare(`
       SELECT e.memory_id, e.vector, m.title, m.filename, m.content, m.memory_type, p.name AS project_name
       FROM embeddings e
       JOIN memories m ON m.id = e.memory_id
       JOIN projects p ON p.id = m.project_id
-    `).all();
+      WHERE e.model = ?
+    `).all(model);
+
+    if (!rows.length) return { content: [{ type: 'text', text: 'No embeddings found — run sync first.' }] };
 
     const scored = rows
       .map(r => ({ ...r, score: cosineSimilarity(queryVec, JSON.parse(r.vector)) }))
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
-
-    if (!scored.length) return { content: [{ type: 'text', text: 'No embeddings found — run sync first.' }] };
 
     const text = scored.map(r => [
       `**${r.project_name}/${r.filename}** [${r.memory_type}] — score: ${r.score.toFixed(3)}`,
@@ -214,7 +227,7 @@ server.tool(
       r.content.slice(0, 400) + (r.content.length > 400 ? '…' : ''),
     ].join('\n')).join('\n\n---\n\n');
 
-    return { content: [{ type: 'text', text: `# Similar to "${description}"\n\n${text}` }] };
+    return { content: [{ type: 'text', text: `# Similar to "${description}" (via ${model})\n\n${text}` }] };
   },
 );
 
@@ -260,13 +273,13 @@ server.tool(
       return { content: [{ type: 'text', text: `"${filename}" in ${project} is already up-to-date.` }] };
     }
 
-    try {
-      const vec = await embed(`${title}\n\n${content}`.slice(0, 2000));
+    const embedResult = await embed(`${title}\n\n${content}`.slice(0, 2000));
+    if (embedResult) {
       db.prepare(`
-        INSERT INTO embeddings (memory_id, vector, model, generated_at) VALUES (?, ?, 'nomic-embed-text', ?)
-        ON CONFLICT(memory_id) DO UPDATE SET vector=excluded.vector, generated_at=excluded.generated_at
-      `).run(memId, JSON.stringify(vec), now);
-    } catch { /* non-fatal if Ollama is down */ }
+        INSERT INTO embeddings (memory_id, vector, model, generated_at) VALUES (?, ?, ?, ?)
+        ON CONFLICT(memory_id) DO UPDATE SET vector=excluded.vector, model=excluded.model, generated_at=excluded.generated_at
+      `).run(memId, JSON.stringify(embedResult.vector), embedResult.model, now);
+    }
 
     const action = existing ? 'Updated' : 'Created';
     return { content: [{ type: 'text', text: `${action} "${filename}" in ${project}.\nWritten to: ${join(memDir, filename)}` }] };
@@ -278,7 +291,7 @@ server.tool(
   'Cross-project dashboard grouped by tech stack.',
   async () => {
     if (!existsSync(DASHBOARD)) {
-      return { content: [{ type: 'text', text: 'Dashboard not found — run ./sync.sh first.' }], isError: true };
+      return { content: [{ type: 'text', text: 'Dashboard not found — run node sync.js first.' }], isError: true };
     }
     return { content: [{ type: 'text', text: readFileSync(DASHBOARD, 'utf8') }] };
   },
@@ -288,7 +301,7 @@ server.tool(
   'sync',
   'Trigger a memory sync from all Claude project sessions without committing to git.',
   async () => new Promise(resolve => {
-    const proc = spawn('bash', [SYNC_SCRIPT, '--no-commit'], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const proc = spawn(process.execPath, [SYNC_SCRIPT], { stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '';
     proc.stdout.on('data', d => { out += d; });
     proc.stderr.on('data', d => { out += d; });

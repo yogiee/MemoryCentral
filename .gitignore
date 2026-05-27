@@ -3,3 +3,7 @@ stats/knowledge.db
 stats/knowledge.db-shm
 stats/knowledge.db-wal
 projects/
+snapshots/
+dashboard/
+memoryCentral-backup-*.json.gz
+.DS_Store
