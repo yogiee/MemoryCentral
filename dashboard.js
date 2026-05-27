@@ -4,4 +4,4 @@
 // Usage: node dashboard.js
 import { start } from './server/dashboard.js';
 
-start(9980);
+start(9980, true);
