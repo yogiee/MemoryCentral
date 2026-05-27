@@ -153,6 +153,25 @@ import.js       Restore utility
 
 Personal data (memories, snapshots, dashboard, database) lives locally and never leaves your machine unless you explicitly run `node export.js` and share the file.
 
+## Dashboard
+
+A lightweight web dashboard runs automatically at `http://localhost:9980` alongside the MCP server in every Claude session. Run it standalone anytime:
+
+```bash
+node dashboard.js
+```
+
+### Features
+
+- **Project cards** — grouped by primary stack tag, with memory count badge, description, stack tags, and colored memory-type breakdown dots (amber=feedback, blue=project, green=user, purple=reference)
+- **Memory browser** — click any card to open a side panel showing all memories grouped by type; click a memory to read the full content with a back button
+- **Full-text search** — type in the search box to query FTS5 across all memories with highlighted excerpts (`<mark>` snippets from SQLite)
+- **Recent activity** — click **Recent** to see the 12 most recently modified memories across all projects
+
+The dashboard uses JSON API routes (`/api/recent`, `/api/search`, `/api/project/:name`, `/api/memory/:id`) with no build step — plain HTML + vanilla JS served from the MCP process.
+
+---
+
 ## Stack
 
 - **Node.js 22+** — `node:sqlite` built-in (zero native deps for core)
