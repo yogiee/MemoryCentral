@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { homedir } from 'os';
 import { openDb } from './db.js';
 import { embed, cosineSimilarity } from './embed.js';
+import { start as startDashboard } from './dashboard.js';
 
 const __dirname    = dirname(fileURLToPath(import.meta.url));
 const REPO         = join(__dirname, '..');
@@ -318,4 +319,5 @@ server.tool(
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
+startDashboard(9980);
 console.error('MemoryCentral MCP server v2 running');
