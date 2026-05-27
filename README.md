@@ -1,153 +1,162 @@
 # MemoryCentral
 
-Cross-project knowledge bank for all local Claude Code sessions. Aggregates memory files from every Claude project into a searchable SQLite database, exposed via a global MCP server.
+Cross-project knowledge bank for Claude Code. Harvests memory files from every Claude project on your machine into a searchable SQLite database, exposed as a global MCP server.
+
+Works on **macOS, Windows, and Linux**.
 
 ## What it does
 
-- Harvests `~/.claude/projects/*/memory/*.md` from all Claude project sessions
-- Stores everything in SQLite with full-text search (FTS5) and semantic embeddings
-- Exposes 8 MCP tools available in **every** Claude session, globally
+- Harvests `~/.claude/projects/*/memory/*.md` from all your Claude sessions
+- Stores everything in SQLite with full-text search (FTS5) and optional semantic embeddings
+- Exposes 9 MCP tools available in **every** Claude session, globally
 - Auto-syncs after each session via a Stop hook (async, non-blocking)
-- Generates per-project snapshot files committed to Git for human-readable diffs
+- Export/import for machine migration and backup
 
-## Architecture
+## Prerequisites
 
+| Requirement | Notes |
+|-------------|-------|
+| **Node.js 22+** | Required for built-in `node:sqlite`. [nodejs.org](https://nodejs.org) |
+| **Claude Code** | The CLI — [claude.ai/code](https://claude.ai/code) |
+| **Ollama** _(optional)_ | Enables richer semantic search and project metadata. [ollama.com](https://ollama.com) |
+
+## Install
+
+```bash
+git clone <repo-url>
+cd MemoryCentral
+node setup.js
 ```
-~/.claude/projects/<project>/memory/*.md   ← Claude writes here (per project)
-              ↓  sync.sh (Stop hook + manual)
-stats/knowledge.db                         ← SQLite: FTS5 + embeddings
-              ↓  MCP server (server/index.js)
-Any Claude session                         ← search, read, write cross-project
-              ↓  save_memory tool
-~/.claude/projects/<project>/memory/*.md   ← also writes back to filesystem
-snapshots/<project>.md                     ← committed to Git
-dashboard/DASHBOARD.md                     ← committed to Git
-```
+
+`setup.js` will:
+1. Check your Node.js version
+2. Install dependencies (`npm install`)
+3. Register the MCP server globally (`claude mcp add --scope user`)
+4. Print a Stop hook snippet to add to `~/.claude/settings.json`
+5. Run the first sync
+
+Then **start a new Claude Code session** — `memoryCentral` tools will be available.
 
 ## MCP Tools
 
 | Tool | Description |
 |------|-------------|
 | `list_projects` | All tracked projects with description, stack tags, memory count |
-| `get_project_summary` | Structured overview of one project: description, stack, memory list by type |
+| `get_project_summary` | Structured overview: description, stack, memory list by type |
 | `get_project_memories` | Full content of all memory files for a project |
 | `search_memories(query, project?)` | FTS keyword search across all projects (or one) |
-| `find_similar(description)` | Semantic search via nomic-embed-text embeddings |
+| `find_similar(description)` | Semantic search — see [Semantic Search](#semantic-search) below |
 | `find_by_stack(tag)` | All projects using a given tech tag (swift, node, python…) |
 | `save_memory(project, filename, content)` | Write a memory mid-session — filesystem + DB + embeddings |
 | `get_dashboard` | Cross-project dashboard grouped by primary stack tag |
 | `sync` | Trigger a full harvest from all Claude project sessions |
 
-## Setup (new machine)
+## Sync
+
+Sync runs automatically after each session via the Stop hook. To run manually:
 
 ```bash
-git clone git@github.com-personal:yogiee/MemoryCentral.git
-cd MemoryCentral
-npm install
+node sync.js
 ```
 
-Register the MCP server globally using the CLI (**not** by editing `settings.json` — Claude Code reads global MCP servers from `~/.claude.json`):
+## Backup and Restore
+
+### Export
 
 ```bash
-claude mcp add --scope user memoryCentral /opt/homebrew/bin/node /absolute/path/to/MemoryCentral/server/index.js
+node export.js
+# → memoryCentral-backup-2026-05-28.json.gz
 ```
 
-Verify it connected:
+Creates a compressed backup of all memory files. Use this before reinstalling your OS or migrating to a new machine.
+
+### Import
 
 ```bash
-claude mcp list
-# memoryCentral: /opt/homebrew/bin/node ... - ✓ Connected
+node import.js memoryCentral-backup-2026-05-28.json.gz
 ```
 
-Add the Stop hook to `~/.claude/settings.json` so the DB syncs after every session:
+Restores all memory files and rebuilds the database automatically.
 
-```json
-{
-  "hooks": {
-    "Stop": [{
-      "matcher": "",
-      "hooks": [{
-        "type": "command",
-        "command": "bash /absolute/path/to/MemoryCentral/sync.sh --no-commit",
-        "async": true
-      }]
-    }]
-  }
-}
-```
+**Same machine / same username:** everything restores in place automatically.
 
-Run the first sync to populate the DB:
+**New machine or new username:** files are restored to the same encoded paths. Claude Code will find them once you open the corresponding projects from the same absolute paths. The import prints a manifest so you can see exactly which projects are in the backup.
+
+---
+
+## Semantic Search
+
+`find_similar` uses vector embeddings to find memories by concept rather than keyword. It works in three modes depending on what's available on your machine:
+
+### Tier 1 — Ollama (recommended for best quality)
+
+If [Ollama](https://ollama.com) is running locally with `nomic-embed-text` installed, it's used automatically.
 
 ```bash
-./sync.sh
+ollama pull nomic-embed-text
 ```
 
-### Global CLAUDE.md (required for proactive cross-project awareness)
+Highest quality embeddings, runs entirely offline, zero API cost.
 
-Create `~/.claude/CLAUDE.md` with the following content. This file is loaded into every Claude session and instructs Claude to use MemoryCentral tools proactively:
+### Tier 2 — Local model via transformers.js (no setup required)
 
-```markdown
-# Global Instructions
+If Ollama isn't available, MemoryCentral automatically falls back to [`@huggingface/transformers`](https://huggingface.co/docs/transformers.js) running a small quantized model (`all-MiniLM-L6-v2`) directly in Node.js.
 
-## MemoryCentral — Cross-Project Knowledge Bank
+- No service to run — the model loads inside the Node process
+- First use downloads ~25 MB and caches it locally (one time only)
+- Quality is slightly lower than nomic-embed-text but still meaningfully semantic
 
-All local Claude projects are indexed in a central SQLite DB with FTS and semantic search.
-MCP server: `memoryCentral` (available in every session).
+### Tier 3 — In-context Claude matching (always works)
 
-### Search before researching
+If neither Tier 1 nor Tier 2 is available, `find_similar` returns all memory content structured for Claude to match using its own understanding. Uses more context window but always works with zero setup.
 
-When working on a technical problem — especially implementation patterns, architecture decisions,
-debugging approaches, or anything you might have solved in another project — call
-`memoryCentral:search_memories` or `memoryCentral:find_similar` first. Do this proactively
-when starting research (web search, reading docs) to avoid repeating prior work.
+### Project metadata extraction
 
-Good triggers:
-- "How did we handle X before?" → `find_similar`
-- Researching a library/pattern also used in other projects → `search_memories`
-- Starting work on a feature with likely prior art (auth, networking, scroll, UI components) → `find_by_stack` + `search_memories`
+When Ollama is running, sync also uses it (via `llama3.1`) to auto-extract human-readable descriptions and stack tags for each project. Without Ollama, descriptions show as `_unknown_` — but all memory content is still fully indexed and searchable.
 
-### Write memories via MCP
+### Capability summary
 
-When you save an important memory (feedback, architectural decision, key discovery), also call
-`memoryCentral:save_memory` so it's immediately searchable across all projects — don't wait
-for the next sync. Use the same filename and content as the memory file you're writing.
+| Feature | No Ollama | With Ollama |
+|---------|-----------|-------------|
+| `search_memories` (keyword) | ✓ Full | ✓ Full |
+| `find_similar` (semantic) | ✓ Via transformers.js or Claude | ✓ Best quality |
+| Project descriptions + stack tags | ✗ Empty | ✓ Auto-extracted |
+| `get_dashboard` | ✓ (no descriptions) | ✓ Full |
 
-memoryCentral:save_memory({
-  project:  "ExactProjectName",   // as shown in list_projects
-  filename: "feedback_auth.md",
-  content:  "---\nname: ...\n---\n\n..."
-})
+---
 
-### Available tools
+## Architecture
 
-| Tool | Use for |
-|------|---------|
-| `list_projects` | See all tracked projects with stack + memory count |
-| `search_memories(query, project?)` | FTS keyword search across all memories |
-| `find_similar(description)` | Semantic search — "how we handled scroll offset" |
-| `find_by_stack(tag)` | All projects using swift, node, python, etc. |
-| `get_project_memories(project)` | Full memory dump for one project |
-| `save_memory(project, filename, content)` | Write memory to DB + filesystem mid-session |
-| `sync` | Pull latest memories from all Claude project sessions |
+```
+~/.claude/projects/<project>/memory/*.md   ← Claude writes here per session
+              ↓  node sync.js  (Stop hook + manual)
+stats/knowledge.db                         ← SQLite: FTS5 + embeddings
+              ↓  server/index.js  (MCP server)
+Any Claude session                         ← 9 tools, cross-project search
+              ↓  save_memory tool
+~/.claude/projects/<project>/memory/*.md   ← writes back to filesystem
+snapshots/<project>.md                     ← local snapshot (gitignored)
+dashboard/DASHBOARD.md                     ← local dashboard (gitignored)
 ```
 
-## Sync script
+## What's in git
 
-```bash
-./sync.sh              # harvest + git commit
-./sync.sh --no-commit  # harvest only (used by Stop hook)
+The repo contains only the **engine** — no personal data is ever committed.
+
 ```
+server/         MCP server + sync logic
+setup.js        One-time setup
+sync.js         Stop hook entry point
+export.js       Backup utility
+import.js       Restore utility
+```
+
+Personal data (memories, snapshots, dashboard, database) lives locally and never leaves your machine unless you explicitly run `node export.js` and share the file.
 
 ## Stack
 
-- **Node 22+** — `node:sqlite` built-in (no native deps)
-- **SQLite** — WAL mode, FTS5, embeddings as JSON
-- **Ollama** — `nomic-embed-text` for embeddings, `llama3.1` for project meta extraction
-- **MCP** — `@modelcontextprotocol/sdk` stdio transport
-
-## Files not in Git
-
-```
-stats/knowledge.db    ← SQLite DB (local only, rebuilt from memory files)
-projects/             ← raw memory file copies (intermediate, not needed)
-```
+- **Node.js 22+** — `node:sqlite` built-in (zero native deps for core)
+- **SQLite** — WAL mode, FTS5 full-text search, vector embeddings as JSON
+- **@huggingface/transformers** — local embedding fallback (Tier 2), ~25 MB model download on first use
+- **Ollama** _(optional)_ — `nomic-embed-text` embeddings, `llama3.1` meta extraction
+- **@modelcontextprotocol/sdk** — stdio MCP transport

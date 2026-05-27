@@ -1,12 +1,13 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
+import { homedir } from 'os';
 import { openDb } from './db.js';
-import { embed, extractProjectMeta } from './ollama.js';
+import { embed, extractProjectMeta } from './embed.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO          = join(__dirname, '..');
-const CLAUDE_PROJ   = join(process.env.HOME, '.claude', 'projects');
+const CLAUDE_PROJ   = join(homedir(), '.claude', 'projects');
 const SNAPSHOTS_DIR = join(REPO, 'snapshots');
 const DASHBOARD_DIR = join(REPO, 'dashboard');
 
@@ -30,12 +31,13 @@ function extractTitle(content, filename) {
 }
 
 function resolveProjectName(encoded) {
-  const homeEnc = process.env.HOME.replace(/\//g, '-');
+  const home = homedir();
+  const homeEnc = home.replace(/[/\\]/g, '-');
   if (!encoded.startsWith(homeEnc)) return encoded.replace(/^-/, '');
   const rel = encoded.slice(homeEnc.length).replace(/^-/, '');
   if (!rel) return 'home';
   const tokens = rel.split('-');
-  let current = process.env.HOME;
+  let current = home;
   let i = 0;
   while (i < tokens.length) {
     let seg = tokens[i++];
@@ -139,8 +141,8 @@ async function main() {
     insertFts:  db.prepare(`INSERT INTO memories_fts (rowid, title, content, project_name, memory_type) VALUES (?, ?, ?, ?, ?)`),
     deleteFts:  db.prepare(`DELETE FROM memories_fts WHERE rowid=?`),
     upsertEmbed: db.prepare(`
-      INSERT INTO embeddings (memory_id, vector, model, generated_at) VALUES (?, ?, 'nomic-embed-text', ?)
-      ON CONFLICT(memory_id) DO UPDATE SET vector=excluded.vector, generated_at=excluded.generated_at
+      INSERT INTO embeddings (memory_id, vector, model, generated_at) VALUES (?, ?, ?, ?)
+      ON CONFLICT(memory_id) DO UPDATE SET vector=excluded.vector, model=excluded.model, generated_at=excluded.generated_at
     `),
   };
 
@@ -207,11 +209,9 @@ async function main() {
   if (toEmbed.length) {
     process.stderr.write(`\nGenerating ${toEmbed.length} embedding(s)...\n`);
     for (const { id, text } of toEmbed) {
-      try {
-        const vec = await embed(text.slice(0, 2000));
-        stmts.upsertEmbed.run(id, JSON.stringify(vec), now);
-      } catch (err) {
-        process.stderr.write(`  Warning: embed failed for memory ${id}: ${err.message}\n`);
+      const result = await embed(text.slice(0, 2000));
+      if (result) {
+        stmts.upsertEmbed.run(id, JSON.stringify(result.vector), result.model, now);
       }
     }
   }
