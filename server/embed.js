@@ -1,4 +1,4 @@
-const OLLAMA_BASE = 'http://localhost:11434';
+const OLLAMA_BASE = (process.env.OLLAMA_HOST ?? 'http://localhost:11434').replace(/\/$/, '');
 
 // ── Tier 1: Ollama ──────────────────────────────────────────────────────────
 
