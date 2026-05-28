@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="server/assets/brand/lockup-horizontal.svg" alt="MemoryCentral" height="48" />
+  <img src="server/assets/brand/lockup-horizontal.svg" alt="MemoryCentral" width="50%" />
 </p>
 
 <p align="center">Cross-project knowledge bank for Claude Code. Harvests memory files from every Claude project on your machine into a searchable SQLite database, exposed as a global MCP server.</p>
