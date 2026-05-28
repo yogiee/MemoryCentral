@@ -1,0 +1,631 @@
+<svg width="328" height="312" viewBox="0 0 82 78" xmlns="http://www.w3.org/2000/svg" fill="none">
+  
+  <g transform="translate(21, 0) scale(1.6667)">
+    <line x1="3" y1="3" x2="9.5" y2="9.5" stroke="#2ab1c0" stroke-width="1.5" stroke-linecap="square"></line>
+    <rect x="9.5" y="9.5" width="5" height="5" fill="#2ab1c0"></rect>
+    <g stroke="#818487" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" fill="none">
+      <polyline points="2 7 2 2 7 2"></polyline>
+      <polyline points="17 2 22 2 22 7"></polyline>
+      <polyline points="22 17 22 22 17 22"></polyline>
+      <polyline points="7 22 2 22 2 17"></polyline>
+    </g>
+  </g>
+  
+  <g transform="translate(0, 48)">
+      <circle cx="1" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="3" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="5" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="7" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="9" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="11" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="15" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="17" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="19" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="21" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="23" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="27" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="29" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="31" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="33" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="35" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="39" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="41" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="43" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="45" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="47" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="51" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="53" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="55" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="57" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="59" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="63" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="65" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="67" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="69" cy="1" r="0.78" fill="#818487"></circle>
+      <circle cx="71" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="75" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="77" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="79" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="81" cy="1" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="1" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="3" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="5" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="7" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="9" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="11" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="15" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="17" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="19" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="21" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="23" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="27" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="29" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="31" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="33" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="35" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="39" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="41" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="43" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="45" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="47" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="51" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="53" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="55" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="57" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="59" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="63" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="65" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="67" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="69" cy="3" r="0.78" fill="#818487"></circle>
+      <circle cx="71" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="75" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="77" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="79" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="81" cy="3" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="1" cy="5" r="0.78" fill="#818487"></circle>
+      <circle cx="3" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="5" cy="5" r="0.78" fill="#818487"></circle>
+      <circle cx="7" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="9" cy="5" r="0.78" fill="#818487"></circle>
+      <circle cx="11" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="5" r="0.78" fill="#818487"></circle>
+      <circle cx="15" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="17" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="19" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="21" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="23" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="5" r="0.78" fill="#818487"></circle>
+      <circle cx="27" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="29" cy="5" r="0.78" fill="#818487"></circle>
+      <circle cx="31" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="33" cy="5" r="0.78" fill="#818487"></circle>
+      <circle cx="35" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="5" r="0.78" fill="#818487"></circle>
+      <circle cx="39" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="41" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="43" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="45" cy="5" r="0.78" fill="#818487"></circle>
+      <circle cx="47" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="5" r="0.78" fill="#818487"></circle>
+      <circle cx="51" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="53" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="55" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="57" cy="5" r="0.78" fill="#818487"></circle>
+      <circle cx="59" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="63" cy="5" r="0.78" fill="#818487"></circle>
+      <circle cx="65" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="67" cy="5" r="0.78" fill="#818487"></circle>
+      <circle cx="69" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="71" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="75" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="77" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="79" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="81" cy="5" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="1" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="3" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="5" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="7" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="9" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="11" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="15" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="17" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="19" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="21" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="23" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="27" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="29" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="31" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="33" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="35" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="39" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="41" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="43" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="45" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="47" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="51" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="53" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="55" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="57" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="59" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="63" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="65" cy="7" r="0.78" fill="#818487"></circle>
+      <circle cx="67" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="69" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="71" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="75" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="77" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="79" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="81" cy="7" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="1" cy="9" r="0.78" fill="#818487"></circle>
+      <circle cx="3" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="5" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="7" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="9" cy="9" r="0.78" fill="#818487"></circle>
+      <circle cx="11" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="9" r="0.78" fill="#818487"></circle>
+      <circle cx="15" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="17" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="19" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="21" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="23" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="9" r="0.78" fill="#818487"></circle>
+      <circle cx="27" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="29" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="31" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="33" cy="9" r="0.78" fill="#818487"></circle>
+      <circle cx="35" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="9" r="0.78" fill="#818487"></circle>
+      <circle cx="39" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="41" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="43" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="45" cy="9" r="0.78" fill="#818487"></circle>
+      <circle cx="47" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="9" r="0.78" fill="#818487"></circle>
+      <circle cx="51" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="53" cy="9" r="0.78" fill="#818487"></circle>
+      <circle cx="55" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="57" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="59" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="63" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="65" cy="9" r="0.78" fill="#818487"></circle>
+      <circle cx="67" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="69" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="71" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="75" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="77" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="79" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="81" cy="9" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="1" cy="11" r="0.78" fill="#818487"></circle>
+      <circle cx="3" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="5" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="7" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="9" cy="11" r="0.78" fill="#818487"></circle>
+      <circle cx="11" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="11" r="0.78" fill="#818487"></circle>
+      <circle cx="15" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="17" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="19" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="21" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="23" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="11" r="0.78" fill="#818487"></circle>
+      <circle cx="27" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="29" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="31" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="33" cy="11" r="0.78" fill="#818487"></circle>
+      <circle cx="35" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="11" r="0.78" fill="#818487"></circle>
+      <circle cx="39" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="41" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="43" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="45" cy="11" r="0.78" fill="#818487"></circle>
+      <circle cx="47" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="11" r="0.78" fill="#818487"></circle>
+      <circle cx="51" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="53" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="55" cy="11" r="0.78" fill="#818487"></circle>
+      <circle cx="57" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="59" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="63" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="65" cy="11" r="0.78" fill="#818487"></circle>
+      <circle cx="67" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="69" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="71" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="75" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="77" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="79" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="81" cy="11" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="1" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="3" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="5" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="7" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="9" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="11" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="15" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="17" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="19" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="21" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="23" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="27" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="29" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="31" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="33" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="35" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="39" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="41" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="43" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="45" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="47" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="51" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="53" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="55" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="57" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="59" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="63" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="65" cy="13" r="0.78" fill="#818487"></circle>
+      <circle cx="67" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="69" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="71" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="75" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="77" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="79" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="81" cy="13" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="1" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="3" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="5" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="7" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="9" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="11" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="15" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="17" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="19" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="21" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="23" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="27" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="29" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="31" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="33" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="35" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="39" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="41" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="43" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="45" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="47" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="51" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="53" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="55" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="57" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="59" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="63" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="65" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="67" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="69" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="71" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="75" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="77" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="79" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="81" cy="15" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="1" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="3" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="5" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="7" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="9" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="11" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="15" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="17" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="19" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="21" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="23" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="27" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="29" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="31" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="33" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="35" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="39" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="41" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="43" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="45" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="47" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="51" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="53" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="55" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="57" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="59" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="63" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="65" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="67" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="69" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="71" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="17" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="75" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="77" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="79" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="81" cy="17" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="1" cy="19" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="3" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="5" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="7" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="9" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="11" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="19" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="15" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="17" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="19" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="21" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="23" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="19" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="27" cy="19" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="29" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="31" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="33" cy="19" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="35" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="39" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="41" cy="19" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="43" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="45" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="47" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="19" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="51" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="53" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="55" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="57" cy="19" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="59" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="19" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="63" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="65" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="67" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="69" cy="19" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="71" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="19" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="75" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="77" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="79" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="81" cy="19" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="1" cy="21" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="3" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="5" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="7" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="9" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="11" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="21" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="15" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="17" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="19" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="21" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="23" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="21" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="27" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="29" cy="21" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="31" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="33" cy="21" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="35" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="39" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="41" cy="21" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="43" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="45" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="47" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="21" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="51" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="53" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="55" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="57" cy="21" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="59" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="21" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="63" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="65" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="67" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="69" cy="21" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="71" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="21" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="75" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="77" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="79" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="81" cy="21" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="1" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="3" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="5" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="7" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="9" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="11" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="15" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="17" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="19" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="21" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="23" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="27" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="29" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="31" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="33" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="35" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="39" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="41" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="43" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="45" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="47" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="51" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="53" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="55" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="57" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="59" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="63" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="65" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="67" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="69" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="71" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="23" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="75" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="77" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="79" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="81" cy="23" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="1" cy="25" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="3" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="5" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="7" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="9" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="11" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="25" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="15" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="17" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="19" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="21" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="23" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="25" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="27" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="29" cy="25" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="31" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="33" cy="25" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="35" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="39" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="41" cy="25" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="43" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="45" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="47" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="25" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="51" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="53" cy="25" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="55" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="57" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="59" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="25" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="63" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="65" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="67" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="69" cy="25" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="71" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="25" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="75" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="77" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="79" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="81" cy="25" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="1" cy="27" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="3" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="5" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="7" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="9" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="11" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="27" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="15" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="17" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="19" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="21" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="23" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="27" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="27" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="29" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="31" cy="27" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="33" cy="27" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="35" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="39" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="41" cy="27" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="43" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="45" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="47" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="27" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="51" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="53" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="55" cy="27" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="57" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="59" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="27" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="63" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="65" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="67" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="69" cy="27" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="71" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="27" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="75" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="77" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="79" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="81" cy="27" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="1" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="3" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="5" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="7" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="9" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="11" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="13" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="15" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="17" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="19" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="21" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="23" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="25" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="27" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="29" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="31" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="33" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="35" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="37" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="39" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="41" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="43" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="45" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="47" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="49" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="51" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="53" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="55" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="57" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="59" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="61" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="63" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="65" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="67" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="69" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="71" cy="29" r="0.72" fill="#818487" opacity="0.22"></circle>
+      <circle cx="73" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="75" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="77" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="79" cy="29" r="0.78" fill="#2ab1c0"></circle>
+      <circle cx="81" cy="29" r="0.78" fill="#2ab1c0"></circle>
+  </g>
+</svg>
