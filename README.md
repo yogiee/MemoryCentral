@@ -32,6 +32,21 @@
 - Local web dashboard at `http://localhost:9980` — Finder-style three-column browser
 - Export/import for machine migration and backup
 
+## Making Claude Use It
+
+Installing MemoryCentral gives you the search infrastructure. To make Claude *proactively* reach for it while coding — before it opens Context7 or does a web search — you need one small convention per project: a `## Stack` block in each project's `CLAUDE.md`.
+
+```markdown
+## Stack
+swift, uikit, swiftdata
+```
+
+With that in place and the lookup rule in your global `~/.claude/CLAUDE.md` (added automatically by `setup.js`), Claude will call `find_by_stack` and `find_similar` before every implementation task — surfacing solutions from other projects on the same stack without you having to ask.
+
+**[Full setup guide and best practices → docs/usage.md](docs/usage.md)**
+
+---
+
 ## Prerequisites
 
 | Requirement | Notes |
