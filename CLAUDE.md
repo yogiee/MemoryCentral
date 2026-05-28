@@ -2,6 +2,9 @@
 
 Central memory and dashboard system for all local Claude Code projects.
 
+## Stack
+node, sqlite, mcp, javascript
+
 ## Purpose
 
 A meta-project that aggregates, tracks, and surfaces memory snapshots, progress, and context across every Claude project on this machine. Think of it as a personal ops layer sitting above individual project sessions.
