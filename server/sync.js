@@ -5,6 +5,8 @@ import { homedir } from 'os';
 import { openDb } from './db.js';
 import { embed, extractProjectMeta } from './embed.js';
 
+const RC_PATH = join(homedir(), '.memorycentralrc.json');
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO          = join(__dirname, '..');
 const CLAUDE_PROJ   = join(homedir(), '.claude', 'projects');
@@ -146,6 +148,44 @@ async function main() {
     `),
   };
 
+  // Helper: ingest all .md files from a directory into a project
+  async function processDir(dir, projectId, projectName) {
+    if (!existsSync(dir)) return { allContent: '', added: 0, updated: 0 };
+    const mdFiles = readdirSync(dir).filter(f => f.endsWith('.md') && !f.startsWith('_'));
+    let allContent = '';
+    let added = 0, updated = 0;
+    for (const filename of mdFiles) {
+      const content = readFileSync(join(dir, filename), 'utf8');
+      allContent += content + '\n';
+      if (filename === 'MEMORY.md') continue;
+      const type     = memoryType(filename);
+      const title    = extractTitle(content, filename);
+      const existing = stmts.getMemory.get(projectId, filename);
+      if (!existing) {
+        const { id } = stmts.insertMem.get(projectId, filename, type, title, content, now);
+        stmts.insertFts.run(id, title, content, projectName, type);
+        toEmbed.push({ id, text: `${title}\n\n${content}` });
+        stats.added++; added++;
+      } else if (existing.content !== content) {
+        stmts.updateMem.run(type, title, content, now, existing.id);
+        stmts.deleteFts.run(existing.id);
+        stmts.insertFts.run(existing.id, title, content, projectName, type);
+        toEmbed.push({ id: existing.id, text: `${title}\n\n${content}` });
+        stats.updated++; updated++;
+      } else {
+        stats.unchanged++;
+      }
+    }
+    return { allContent, added, updated };
+  }
+
+  // Load extra paths config
+  const extraPaths = existsSync(RC_PATH)
+    ? (JSON.parse(readFileSync(RC_PATH, 'utf8')).extraPaths || {})
+    : {};
+
+  const seenProjects = new Set();
+
   for (const entry of readdirSync(CLAUDE_PROJ, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const memDir = join(CLAUDE_PROJ, entry.name, 'memory');
@@ -157,36 +197,19 @@ async function main() {
     const name    = resolveProjectName(entry.name);
     const project = stmts.upsertProject.get(name, entry.name, now);
     stats.projects++;
+    seenProjects.add(name);
 
-    let allContent = '';
-    let pAdded = 0, pUpdated = 0;
+    let pAdded = 0, pUpdated = 0, allContent = '';
 
-    for (const filename of mdFiles) {
-      const content = readFileSync(join(memDir, filename), 'utf8');
-      allContent += content + '\n';
+    const std = await processDir(memDir, project.id, name);
+    allContent += std.allContent;
+    pAdded += std.added; pUpdated += std.updated;
 
-      if (filename === 'MEMORY.md') continue; // index file, not a memory entry
-
-      const type     = memoryType(filename);
-      const title    = extractTitle(content, filename);
-      const existing = stmts.getMemory.get(project.id, filename);
-
-      if (!existing) {
-        const { id } = stmts.insertMem.get(project.id, filename, type, title, content, now);
-        stmts.insertFts.run(id, title, content, name, type);
-        toEmbed.push({ id, text: `${title}\n\n${content}` });
-        stats.added++;
-        pAdded++;
-      } else if (existing.content !== content) {
-        stmts.updateMem.run(type, title, content, now, existing.id);
-        stmts.deleteFts.run(existing.id);
-        stmts.insertFts.run(existing.id, title, content, name, type);
-        toEmbed.push({ id: existing.id, text: `${title}\n\n${content}` });
-        stats.updated++;
-        pUpdated++;
-      } else {
-        stats.unchanged++;
-      }
+    // Extra paths for this project
+    for (const extraDir of (extraPaths[name] || [])) {
+      const extra = await processDir(extraDir, project.id, name);
+      allContent += extra.allContent;
+      pAdded += extra.added; pUpdated += extra.updated;
     }
 
     // Extract description + stack via Ollama if missing
@@ -203,6 +226,29 @@ async function main() {
     writeSnapshot(db, project.id, name);
     const tag = pAdded || pUpdated ? ` +${pAdded} ~${pUpdated}` : ' (no changes)';
     process.stdout.write(`  ✓  ${name}${tag}\n`);
+  }
+
+  // Extra-paths-only projects (no ~/.claude/projects/ entry)
+  for (const [projectName, dirs] of Object.entries(extraPaths)) {
+    if (seenProjects.has(projectName)) continue;
+    const encodedPath = 'extra-' + projectName;
+    const project = stmts.upsertProject.get(projectName, encodedPath, now);
+    stats.projects++;
+    let allContent = '', pAdded = 0, pUpdated = 0;
+    for (const extraDir of dirs) {
+      const extra = await processDir(extraDir, project.id, projectName);
+      allContent += extra.allContent;
+      pAdded += extra.added; pUpdated += extra.updated;
+    }
+    if (!project.description && allContent) {
+      try {
+        const meta = await extractProjectMeta(allContent);
+        stmts.updateMeta.run(meta.description, JSON.stringify(meta.stack), project.id);
+      } catch {}
+    }
+    writeSnapshot(db, project.id, projectName);
+    const tag = pAdded || pUpdated ? ` +${pAdded} ~${pUpdated}` : ' (no changes)';
+    process.stdout.write(`  ✓  ${projectName} [extra]${tag}\n`);
   }
 
   // Generate embeddings for new/changed entries
