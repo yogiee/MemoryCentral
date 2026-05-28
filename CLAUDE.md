@@ -17,58 +17,29 @@ A meta-project that aggregates, tracks, and surfaces memory snapshots, progress,
 - Easy to back up, restore, and sync between machines
 - Available in every Claude session via a global MCP server
 
-## Architecture (decided in kickoff session)
+## Architecture
 
 ### Data layer
-- `projects/` — per-project memory snapshots (Markdown, mirroring each project's memory files)
-- `dashboard/DASHBOARD.md` — aggregated cross-project summary, auto-generated
-- `stats/stats.db` — SQLite for structured tracking (sessions, effort, time)
-- Everything in a private Git repo for portability and sync
-
-### Sync strategy
-- Shell script (`sync.sh`) harvests `~/.claude/projects/*/memory/` into `projects/`
-- Git-backed: `git push` to sync, `git clone` to restore on a new machine
+- `stats/knowledge.db` — SQLite with FTS5 full-text search and vector embeddings
+- `~/.claude/projects/*/memory/*.md` — source of truth; Claude writes here per session
 - No proprietary format — all Markdown + SQLite, no lock-in
 
+### Sync
+- `sync.js` harvests `~/.claude/projects/*/memory/` into the DB after each session (Stop hook)
+- Extra paths per project configurable in `~/.memorycentralrc.json`
+- `node export.js` / `node import.js` for backup and machine migration
+
 ### Local AI layer (Ollama)
-- Used **between sessions** (not during) for lightweight background tasks:
-  - Summarising/deduplicating memory entries before committing
-  - Generating embeddings for semantic search across all project memories
-  - Nightly aggregation job that refreshes `DASHBOARD.md` without Anthropic API usage
-- OpenWebUI's Knowledge feature can index memory files for conversational lookup
+- `nomic-embed-text` — vector embeddings for semantic search (Tier 1, recommended)
+- `llama3.1` — auto-extracts project descriptions and stack tags during sync
+- Falls back to `@huggingface/transformers` (Tier 2) or in-context Claude matching (Tier 3) if Ollama is unavailable
 
 ### MCP server
-- Custom lightweight MCP server (Node or Python) backed by this repo
-- Registered globally in `~/.claude/settings.json` so it's available in every project session
-- Portability: clone repo on new machine → update one path in settings → done
-- Server binary lives inside this repo (no separate install step)
-
-### Project/task context per project
-Each `projects/<name>/` snapshot holds:
-- Active milestone / sprint
-- Open tasks with status
-- Blocked items and reasons
-- Key architectural decisions
-- Links to relevant files / PRs
-
-## Immediate next steps
-
-1. `git init` this directory and create private remote repo
-2. Design the `projects/<name>/snapshot.md` schema
-3. Write `sync.sh` — the harvester script that reads all project memories and writes snapshots
-4. Decide on MCP server language (Node vs Python) and scaffold it
-5. Wire up Ollama summarisation step in the sync pipeline
-6. Configure global MCP in `~/.claude/settings.json`
-
-## Machine-specific paths
-
-- Claude project memories: `~/.claude/projects/`
-- This repo: `~/WORK/Personal-Projects/MemoryCentral/`
-- Ollama: running locally (models available for local inference)
-- OPNsense / homelab context: see separate homelab projects
+- Node.js server (`server/index.js`) registered globally via `claude mcp add --scope user`
+- Exposes 9 tools available in every Claude session
+- Dashboard auto-starts at `http://localhost:9980` alongside the MCP server
 
 ## Notes
 
-- Start simple: get the sync script and Git foundation right before building the MCP layer
 - Ollama is best for background processing; don't try to replace Claude for quality synthesis tasks
 - The MCP server's data directory should always point at the Git-cloned path so a `git pull` is the only restore step needed on a new machine
