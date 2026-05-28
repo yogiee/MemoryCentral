@@ -90,13 +90,25 @@ Restores all memory files and rebuilds the database automatically.
 
 ### Tier 1 — Ollama (recommended for best quality)
 
-If [Ollama](https://ollama.com) is running locally with `nomic-embed-text` installed, it's used automatically.
+If [Ollama](https://ollama.com) is running with `nomic-embed-text` installed, it's used automatically. Ollama can be running locally or on another machine on your network.
 
 ```bash
 ollama pull nomic-embed-text
 ```
 
 Highest quality embeddings, runs entirely offline, zero API cost.
+
+**Remote Ollama:** If Ollama runs on a different machine, set `OLLAMA_HOST` in the MCP server config in `~/.claude.json`:
+
+```json
+"memoryCentral": {
+  "command": "node",
+  "args": ["/path/to/MemoryCentral/server/index.js"],
+  "env": { "OLLAMA_HOST": "http://192.168.1.50:11434" }
+}
+```
+
+Defaults to `http://localhost:11434` when not set.
 
 ### Tier 2 — Local model via transformers.js (no setup required)
 
