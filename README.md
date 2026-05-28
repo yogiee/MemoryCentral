@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/screenshots/06-icon-hero.png" alt="MemoryCentral icon" width="180">
+  <img src="server/assets/icons/cells-brand.svg" alt="MemoryCentral icon" width="72">
   <h1>MemoryCentral</h1>
   <p>Cross-project knowledge bank for Claude Code. Harvests memory files from every Claude project on your machine into a searchable SQLite database, exposed as a global MCP server.</p>
   <p><strong>macOS · Windows · Linux</strong></p>
@@ -113,6 +113,28 @@ Sync runs automatically after each session via the Stop hook. To run manually:
 ```bash
 node sync.js
 ```
+
+## Project-level Memory Integration
+
+Some projects keep memory files outside the standard `~/.claude/projects/*/memory/` path — for example a `memory-bank/` folder inside the project repo itself (common with Cursor or Cline workflows). MemoryCentral can harvest those too.
+
+Create `~/.memorycentralrc.json` and declare extra scan paths per project name:
+
+```json
+{
+  "extraPaths": {
+    "inspector": ["/Users/you/work/inspector/memory-bank"],
+    "another-project": ["/path/to/docs", "/another/path"]
+  }
+}
+```
+
+- Project names must match exactly as shown in the dashboard or `list_projects`
+- Multiple directories per project are supported
+- Files are merged into the same project entry — fully searchable alongside Claude memory files
+- The config is machine-specific and never committed to git
+
+Run `node sync.js` after adding the config to pick up the new files immediately.
 
 ## Backup and Restore
 
