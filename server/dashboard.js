@@ -251,6 +251,14 @@ function handleGet(req, res, port) {
     res.writeHead(404); res.end(); return;
   }
 
+  // Brand assets
+  if (path.startsWith('/assets/brand/')) {
+    const name = path.slice('/assets/brand/'.length);
+    if (name && !name.includes('/') && name.endsWith('.svg'))
+      return serveStatic(res, join(ASSETS, 'brand', name));
+    res.writeHead(404); res.end(); return;
+  }
+
   // JSON API
   if (path === '/api/projects') {
     const db = openDb();

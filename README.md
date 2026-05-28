@@ -1,9 +1,10 @@
-<div align="center">
-  <img src="server/assets/icons/cells-brand.svg" alt="MemoryCentral icon" width="72">
-  <h1>MemoryCentral</h1>
-  <p>Cross-project knowledge bank for Claude Code. Harvests memory files from every Claude project on your machine into a searchable SQLite database, exposed as a global MCP server.</p>
-  <p><strong>macOS · Windows · Linux</strong></p>
-</div>
+<p align="center">
+  <img src="docs/memorycentral-brand/lockup-stacked.svg" alt="MemoryCentral" height="160" />
+</p>
+
+<p align="center">Cross-project knowledge bank for Claude Code. Harvests memory files from every Claude project on your machine into a searchable SQLite database, exposed as a global MCP server.</p>
+
+<p align="center"><strong>macOS · Windows · Linux</strong></p>
 
 ---
 
