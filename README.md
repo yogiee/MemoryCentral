@@ -1,8 +1,26 @@
-# MemoryCentral
+<div align="center">
+  <img src="docs/screenshots/06-icon-hero.png" alt="MemoryCentral icon" width="180">
+  <h1>MemoryCentral</h1>
+  <p>Cross-project knowledge bank for Claude Code. Harvests memory files from every Claude project on your machine into a searchable SQLite database, exposed as a global MCP server.</p>
+  <p><strong>macOS · Windows · Linux</strong></p>
+</div>
 
-Cross-project knowledge bank for Claude Code. Harvests memory files from every Claude project on your machine into a searchable SQLite database, exposed as a global MCP server.
+---
 
-Works on **macOS, Windows, and Linux**.
+![Dashboard overview — light](docs/screenshots/01-dashboard-light-overview.png)
+
+<details>
+<summary>More screenshots</summary>
+
+![Dashboard overview — dark](docs/screenshots/02-dashboard-dark-overview.png)
+
+![Project selected — all three columns](docs/screenshots/03-dashboard-light-project.png)
+
+![Full-text search with highlighted excerpts](docs/screenshots/05-dashboard-light-search.png)
+
+</details>
+
+---
 
 ## What it does
 
@@ -10,6 +28,7 @@ Works on **macOS, Windows, and Linux**.
 - Stores everything in SQLite with full-text search (FTS5) and optional semantic embeddings
 - Exposes 9 MCP tools available in **every** Claude session, globally
 - Auto-syncs after each session via a Stop hook (async, non-blocking)
+- Local web dashboard at `http://localhost:9980` — Finder-style three-column browser
 - Export/import for machine migration and backup
 
 ## Prerequisites
@@ -23,7 +42,7 @@ Works on **macOS, Windows, and Linux**.
 ## Install
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/yogiee/MemoryCentral
 cd MemoryCentral
 node setup.js
 ```
@@ -36,6 +55,42 @@ node setup.js
 5. Run the first sync
 
 Then **start a new Claude Code session** — `memoryCentral` tools will be available.
+
+## Dashboard
+
+The dashboard starts automatically at `http://localhost:9980` alongside the MCP server in every Claude session. Run it standalone anytime:
+
+```bash
+node dashboard.js
+```
+
+### Layout
+
+Three-column Finder-style browser — always visible:
+
+| Column | Content |
+|--------|---------|
+| **Projects** (320px) | All tracked projects grouped by primary stack tag |
+| **Memories** (360px) | Memory list for the selected project, search results, or recent feed |
+| **Detail** | Full memory content rendered from Markdown |
+
+### Features
+
+- **Overview landing** — stat tiles, memories-by-stack bar chart, memories-by-type breakdown, recent activity feed, embeddings tier indicator
+- **Project view** — memories grouped by type (project / reference / user / feedback) with type-filter pills
+- **Full-text search** — FTS5 with `<mark>` highlighted excerpts, debounced as you type
+- **Recent activity** — last 12 modified memories across all projects via rail button
+- **Memory detail** — Markdown rendered in-pane; Copy path, Find similar, and Delete actions
+- **Light / Dark / System** themes — persisted to `localStorage`
+- **Sync button** — triggers a full harvest from the rail without leaving the browser
+- **Cmd-K** — focuses search from anywhere; Esc clears and returns to previous view
+
+### Keyboard shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd-K` / `Ctrl-K` | Focus search |
+| `Esc` (in search) | Clear search and return to previous view |
 
 ## MCP Tools
 
@@ -86,11 +141,11 @@ Restores all memory files and rebuilds the database automatically.
 
 ## Semantic Search
 
-`find_similar` uses vector embeddings to find memories by concept rather than keyword. It works in three modes depending on what's available on your machine:
+`find_similar` uses vector embeddings to find memories by concept rather than keyword. It works in three tiers depending on what's available:
 
-### Tier 1 — Ollama (recommended for best quality)
+### Tier 1 — Ollama (recommended)
 
-If [Ollama](https://ollama.com) is running with `nomic-embed-text` installed, it's used automatically. Ollama can be running locally or on another machine on your network.
+If [Ollama](https://ollama.com) is running with `nomic-embed-text` installed, it's used automatically. Ollama can be local or on another machine on your network.
 
 ```bash
 ollama pull nomic-embed-text
@@ -98,7 +153,7 @@ ollama pull nomic-embed-text
 
 Highest quality embeddings, runs entirely offline, zero API cost.
 
-**Remote Ollama:** If Ollama runs on a different machine, set `OLLAMA_HOST` in the MCP server config in `~/.claude.json`:
+**Remote Ollama:** set `OLLAMA_HOST` in the MCP server config in `~/.claude.json`:
 
 ```json
 "memoryCentral": {
@@ -110,21 +165,21 @@ Highest quality embeddings, runs entirely offline, zero API cost.
 
 Defaults to `http://localhost:11434` when not set.
 
-### Tier 2 — Local model via transformers.js (no setup required)
+### Tier 2 — transformers.js (no setup required)
 
-If Ollama isn't available, MemoryCentral automatically falls back to [`@huggingface/transformers`](https://huggingface.co/docs/transformers.js) running a small quantized model (`all-MiniLM-L6-v2`) directly in Node.js.
+If Ollama isn't available, MemoryCentral falls back to [`@huggingface/transformers`](https://huggingface.co/docs/transformers.js) running `all-MiniLM-L6-v2` directly in Node.js.
 
-- No service to run — the model loads inside the Node process
-- First use downloads ~25 MB and caches it locally (one time only)
-- Quality is slightly lower than nomic-embed-text but still meaningfully semantic
+- No service to run — model loads inside the Node process
+- First use downloads ~25 MB and caches locally (one time only)
+- Slightly lower quality than nomic-embed-text but still meaningfully semantic
 
 ### Tier 3 — In-context Claude matching (always works)
 
-If neither Tier 1 nor Tier 2 is available, `find_similar` returns all memory content structured for Claude to match using its own understanding. Uses more context window but always works with zero setup.
+If neither Tier 1 nor Tier 2 is available, `find_similar` returns all memory content for Claude to match using its own understanding. Uses more context window but requires zero setup.
 
 ### Project metadata extraction
 
-When Ollama is running, sync also uses it (via `llama3.1`) to auto-extract human-readable descriptions and stack tags for each project. Without Ollama, descriptions show as `_unknown_` — but all memory content is still fully indexed and searchable.
+When Ollama is running, sync also uses `llama3.1` to auto-extract human-readable descriptions and stack tags for each project. Without Ollama, descriptions show as `_unknown_` — but all memory content is still fully indexed and searchable.
 
 ### Capability summary
 
@@ -133,7 +188,7 @@ When Ollama is running, sync also uses it (via `llama3.1`) to auto-extract human
 | `search_memories` (keyword) | ✓ Full | ✓ Full |
 | `find_similar` (semantic) | ✓ Via transformers.js or Claude | ✓ Best quality |
 | Project descriptions + stack tags | ✗ Empty | ✓ Auto-extracted |
-| `get_dashboard` | ✓ (no descriptions) | ✓ Full |
+| Dashboard embeddings tier | Tier 2 / 3 shown | Tier 1 shown |
 
 ---
 
@@ -143,12 +198,11 @@ When Ollama is running, sync also uses it (via `llama3.1`) to auto-extract human
 ~/.claude/projects/<project>/memory/*.md   ← Claude writes here per session
               ↓  node sync.js  (Stop hook + manual)
 stats/knowledge.db                         ← SQLite: FTS5 + embeddings
-              ↓  server/index.js  (MCP server)
-Any Claude session                         ← 9 tools, cross-project search
+              ↓  server/index.js  (MCP server + dashboard)
+Any Claude session                         ← 9 MCP tools, cross-project search
               ↓  save_memory tool
 ~/.claude/projects/<project>/memory/*.md   ← writes back to filesystem
-snapshots/<project>.md                     ← local snapshot (gitignored)
-dashboard/DASHBOARD.md                     ← local dashboard (gitignored)
+http://localhost:9980                      ← local dashboard (auto-starts)
 ```
 
 ## What's in git
@@ -156,33 +210,17 @@ dashboard/DASHBOARD.md                     ← local dashboard (gitignored)
 The repo contains only the **engine** — no personal data is ever committed.
 
 ```
-server/         MCP server + sync logic
+server/         MCP server, sync logic, dashboard HTTP server
+server/public/  Dashboard HTML + CSS + JS (no build step)
+server/assets/  Icon SVGs
 setup.js        One-time setup
 sync.js         Stop hook entry point
 export.js       Backup utility
 import.js       Restore utility
+docs/           Screenshots
 ```
 
-Personal data (memories, snapshots, dashboard, database) lives locally and never leaves your machine unless you explicitly run `node export.js` and share the file.
-
-## Dashboard
-
-A lightweight web dashboard runs automatically at `http://localhost:9980` alongside the MCP server in every Claude session. Run it standalone anytime:
-
-```bash
-node dashboard.js
-```
-
-### Features
-
-- **Project cards** — grouped by primary stack tag, with memory count badge, description, stack tags, and colored memory-type breakdown dots (amber=feedback, blue=project, green=user, purple=reference)
-- **Memory browser** — click any card to open a side panel showing all memories grouped by type; click a memory to read the full content with a back button
-- **Full-text search** — type in the search box to query FTS5 across all memories with highlighted excerpts (`<mark>` snippets from SQLite)
-- **Recent activity** — click **Recent** to see the 12 most recently modified memories across all projects
-
-The dashboard uses JSON API routes (`/api/recent`, `/api/search`, `/api/project/:name`, `/api/memory/:id`) with no build step — plain HTML + vanilla JS served from the MCP process.
-
----
+Personal data (memories, snapshots, database) lives locally and never leaves your machine unless you explicitly run `node export.js` and share the file.
 
 ## Stack
 
