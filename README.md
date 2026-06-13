@@ -183,13 +183,13 @@ Restores all memory files and rebuilds the database automatically.
 
 ### Tier 1 — Ollama (recommended)
 
-If [Ollama](https://ollama.com) is running with `nomic-embed-text` installed, it's used automatically. Ollama can be local or on another machine on your network.
+If [Ollama](https://ollama.com) is running with `embeddinggemma:300m` installed, it's used automatically. Ollama can be local or on another machine on your network.
 
 ```bash
-ollama pull nomic-embed-text
+ollama pull embeddinggemma:300m
 ```
 
-Highest quality embeddings, runs entirely offline, zero API cost.
+Highest quality embeddings, runs entirely offline, zero API cost. embeddinggemma stays accurate on long memories (clean retrieval to ~8k characters), so MemoryCentral embeds up to 6000 characters per memory. Override the model with `EMBED_MODEL` and the input cap with `EMBED_MAX_CHARS`. Switching models requires re-embedding: `node server/reembed.js`.
 
 **Remote Ollama:** set `OLLAMA_HOST` in the MCP server config in `~/.claude.json`:
 
@@ -209,7 +209,8 @@ If Ollama isn't available, MemoryCentral falls back to [`@huggingface/transforme
 
 - No service to run — model loads inside the Node process
 - First use downloads ~25 MB and caches locally (one time only)
-- Slightly lower quality than nomic-embed-text but still meaningfully semantic
+- Slightly lower quality than embeddinggemma and a smaller context window (384-dim, ~512 tokens), but still meaningfully semantic
+- Note: this is a *different* model/vector space than Tier 1 — a table built on one engine must be re-embedded if you switch engines
 
 ### Tier 3 — In-context Claude matching (always works)
 
@@ -265,5 +266,5 @@ Personal data (memories, snapshots, database) lives locally and never leaves you
 - **Node.js 22+** — `node:sqlite` built-in (zero native deps for core)
 - **SQLite** — WAL mode, FTS5 full-text search, vector embeddings as JSON
 - **@huggingface/transformers** — local embedding fallback (Tier 2), ~25 MB model download on first use
-- **Ollama** _(optional)_ — `nomic-embed-text` embeddings, `llama3.1` meta extraction
+- **Ollama** _(optional)_ — `embeddinggemma:300m` embeddings, `llama3.1` meta extraction
 - **@modelcontextprotocol/sdk** — stdio MCP transport

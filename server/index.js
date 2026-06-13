@@ -274,7 +274,7 @@ server.tool(
       return { content: [{ type: 'text', text: `"${filename}" in ${project} is already up-to-date.` }] };
     }
 
-    const embedResult = await embed(`${title}\n\n${content}`.slice(0, 2000));
+    const embedResult = await embed(`${title}\n\n${content}`); // embed() applies EMBED_MAX_CHARS
     if (embedResult) {
       db.prepare(`
         INSERT INTO embeddings (memory_id, vector, model, generated_at) VALUES (?, ?, ?, ?)
@@ -310,6 +310,44 @@ server.tool(
       content: [{ type: 'text', text: code === 0 ? `Sync complete:\n\n${out}` : `Sync failed (exit ${code}):\n\n${out}` }],
       isError: code !== 0,
     }));
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Prompts — usage guidance for MCP hosts
+// ---------------------------------------------------------------------------
+
+const USAGE_INSTRUCTIONS = `\
+## MemoryCentral — cross-project knowledge
+
+You have access to a persistent knowledge bank of decisions, solutions, and discoveries \
+from ALL of the user's projects — not just this one.
+
+**When to use:**
+- \`memoryCentral__find_similar(description)\` — Semantic search. Use proactively when: \
+the user asks how something was done before ("how did we do X?"), you're about to \
+implement a known pattern (auth, scroll, caching, navigation, persistence, networking), \
+or you suspect a prior solution exists in another project.
+- \`memoryCentral__search_memories(query, project?)\` — Keyword search. Use for specific \
+named things: a library name, a tool, an architectural decision.
+- \`memoryCentral__get_project_memories(project)\` — Full memory dump for one project. \
+Use when the user explicitly asks about a specific project's history.
+
+**Conventions:**
+- Check MemoryCentral before solving a problem from scratch. If a prior solution \
+surfaces, verify it's still valid, then apply it.
+- Don't announce you checked if nothing relevant comes back — just proceed normally.
+- \`memoryCentral__save_memory\` persists knowledge across Claude sessions; use \
+\`save_memory\` (the builtin tool) for project-local notes instead.`;
+
+server.prompt(
+  'usage_instructions',
+  'System prompt fragment for AI assistants — when and how to use MemoryCentral tools for cross-project knowledge retrieval.',
+  async () => ({
+    messages: [{
+      role: 'user',
+      content: { type: 'text', text: USAGE_INSTRUCTIONS },
+    }],
   }),
 );
 

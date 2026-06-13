@@ -98,7 +98,9 @@ function getOverview(db) {
   const lastEmbed = db.prepare(
     `SELECT model FROM embeddings ORDER BY generated_at DESC LIMIT 1`
   ).get();
-  const tier = !lastEmbed ? 3 : lastEmbed.model === 'nomic-embed-text' ? 1 : 2;
+  // Tier 2 is the transformers.js fallback (all-MiniLM-L6-v2); any other model is
+  // the Tier-1 Ollama provider (granite-embedding:30m by default).
+  const tier = !lastEmbed ? 3 : lastEmbed.model === 'all-MiniLM-L6-v2' ? 2 : 1;
 
   // Aggregate byStack
   const stackMap = {};
