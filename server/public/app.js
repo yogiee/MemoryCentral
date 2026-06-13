@@ -384,7 +384,7 @@ function renderOverview(data) {
   var tiers = el('div', { 'class': 'tier-list' });
   var tier = data.tier || 3;
   [
-    ['Ollama · nomic-embed-text', 'tier 1', tier === 1],
+    ['Ollama · embeddinggemma:300m', 'tier 1', tier === 1],
     ['transformers.js · MiniLM-L6', 'fallback', tier === 2],
     ['In-context Claude matching', 'fallback', tier === 3],
   ].forEach(function(row) {

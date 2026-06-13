@@ -1,17 +1,29 @@
 const OLLAMA_BASE = (process.env.OLLAMA_HOST ?? 'http://localhost:11434').replace(/\/$/, '');
 
+// Tier-1 embedding model. Override via EMBED_MODEL.
+// embeddinggemma:300m chosen 2026-06-13 over nomic and the BenchLLAMA EMB winner
+// granite-embedding:30m (whose 512-token window truncated 66% of our memories).
+// emb-gemma: 768-dim (drop-in), clean retrieval to ~8k chars, beats nomic on every
+// discrimination metric on our corpus. Full rationale: docs/embedding-eval-2026-06-13.md.
+const EMBED_MODEL = process.env.EMBED_MODEL ?? 'embeddinggemma:300m';
+
+// Max input chars per embed. Raised 2000→6000 with the emb-gemma switch — sits inside
+// emb-gemma's clean ~8k-char (2048-tok) window, capturing long-memory body content that
+// the old 2000 cap truncated away. Centralized here so all callers stay consistent.
+const EMBED_MAX_CHARS = Number(process.env.EMBED_MAX_CHARS) || 6000;
+
 // ── Tier 1: Ollama ──────────────────────────────────────────────────────────
 
 async function ollamaEmbed(text) {
   const res = await fetch(`${OLLAMA_BASE}/api/embeddings`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'nomic-embed-text', prompt: text }),
+    body: JSON.stringify({ model: EMBED_MODEL, prompt: text }),
     signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error(`Ollama embed: ${res.status}`);
   const { embedding } = await res.json();
-  return { vector: embedding, model: 'nomic-embed-text' };
+  return { vector: embedding, model: EMBED_MODEL };
 }
 
 // ── Tier 2: @huggingface/transformers (local, no service required) ──────────
@@ -33,8 +45,9 @@ async function localEmbed(text) {
 // Returns { vector: number[], model: string } or null (no provider available).
 // Callers must handle null gracefully.
 export async function embed(text) {
-  try { return await ollamaEmbed(text); } catch {}
-  try { return await localEmbed(text); } catch {}
+  const input = String(text).slice(0, EMBED_MAX_CHARS);
+  try { return await ollamaEmbed(input); } catch {}
+  try { return await localEmbed(input); } catch {}
   return null;
 }
 

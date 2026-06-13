@@ -255,7 +255,7 @@ async function main() {
   if (toEmbed.length) {
     process.stderr.write(`\nGenerating ${toEmbed.length} embedding(s)...\n`);
     for (const { id, text } of toEmbed) {
-      const result = await embed(text.slice(0, 2000));
+      const result = await embed(text); // embed() applies EMBED_MAX_CHARS
       if (result) {
         stmts.upsertEmbed.run(id, JSON.stringify(result.vector), result.model, now);
       }

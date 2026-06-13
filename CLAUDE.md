@@ -30,7 +30,7 @@ A meta-project that aggregates, tracks, and surfaces memory snapshots, progress,
 - `node export.js` / `node import.js` for backup and machine migration
 
 ### Local AI layer (Ollama)
-- `nomic-embed-text` — vector embeddings for semantic search (Tier 1, recommended)
+- `embeddinggemma:300m` — vector embeddings for semantic search (Tier 1, recommended; 768-dim, clean to ~8k chars). Switched from `nomic-embed-text` 2026-06-13 — see `docs/embedding-eval-2026-06-13.md`
 - `llama3.1` — auto-extracts project descriptions and stack tags during sync
 - Falls back to `@huggingface/transformers` (Tier 2) or in-context Claude matching (Tier 3) if Ollama is unavailable
 
