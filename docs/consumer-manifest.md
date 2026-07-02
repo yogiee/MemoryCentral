@@ -86,13 +86,13 @@ Field notes:
 
 ---
 
-## Validation against BenchLLAMA's `rankings.json` (2026-06-27)
+## Validation against BenchLLAMA's `rankings.json` (2026-07-02)
 
 BenchLLAMA now publishes `~/.config/ollama-consumers/benchllama-rankings.json` (the producer→consumer
 "what's good" file). It confirms the feedback loop worked: the embedding battery was **split into
 `embedding_short` and `embedding_long`** — the long-context tuning MemoryCentral asked for. Our
 `embed` assignment equals `rankings.embedding_long[0]` (verified). The split is decisive (the
-`2026-06-27` drop scores two embedding models):
+`2026-07-02` drop scores two embedding models):
 
 | model | short rank | long rank | composite_long | quality/GB |
 |---|---|---|---|---|
@@ -102,8 +102,8 @@ BenchLLAMA now publishes `~/.config/ollama-consumers/benchllama-rankings.json` (
 `top-ranked` (short battery) and `efficiency-balanced` (best quality/GB) would **both** pick
 granite — which fails us (`embedding_long` last, 512-tok truncation). Only `requirements-fit` =
 `embedding_long[0]` lands on embeddinggemma. That divergence is precisely the signal this manifest
-returns to BenchLLAMA. Re-validated against the `benchllama@2026-06-27` drop: ranking order and
-our pick are unchanged.
+returns to BenchLLAMA. Re-validated against the `benchllama@2026-07-02` drop: ranking order and
+our pick are unchanged (embedding scores identical to the prior `2026-06-27` drop).
 
 ---
 
