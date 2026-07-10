@@ -4,4 +4,5 @@ projects/
 snapshots/
 dashboard/
 memoryCentral-backup-*.json.gz
+MemoryCentral.zip
 .DS_Store
