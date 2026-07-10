@@ -1,0 +1,1056 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <title>MemoryCentral — Icon spec</title>
+  <meta name="viewport" content="width=1440" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" />
+  <style>
+    :root {
+      --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+      --font-mono: "Geist Mono", ui-monospace, "JetBrains Mono", monospace;
+
+      /* warm-light palette, same family as dashboard */
+      --bg:           oklch(0.985 0.008 75);
+      --bg-2:         oklch(0.965 0.011 70);
+      --panel:        oklch(0.998 0.005 78);
+      --panel-2:      oklch(0.975 0.01 72);
+      --border:       oklch(0.90 0.013 65);
+      --border-soft:  oklch(0.935 0.011 70);
+      --text:         oklch(0.22 0.018 55);
+      --text-dim:     oklch(0.48 0.018 55);
+      --text-faint:   oklch(0.64 0.015 60);
+      --accent:       oklch(0.56 0.135 40);     /* used only for ui chrome — NOT in the mark */
+      --accent-soft:  oklch(0.93 0.05 55);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---------- LAYOUT ---------- */
+    .page { max-width: 1280px; margin: 0 auto; padding: 56px 64px 96px; }
+
+    header.top {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 36px; margin-bottom: 56px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--border);
+    }
+    .top-left .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-faint);
+      margin-bottom: 12px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .top-left .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .top-left h1 {
+      font-size: 44px;
+      letter-spacing: -0.025em;
+      font-weight: 600;
+      margin: 0;
+      line-height: 1.05;
+    }
+    .top-left .sub {
+      margin-top: 14px;
+      color: var(--text-dim);
+      font-size: 17px;
+      max-width: 580px;
+      line-height: 1.55;
+    }
+    .top-right {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: -0.02em;
+      color: var(--text-faint);
+      text-align: right;
+      line-height: 1.7;
+    }
+    .top-right .v { color: var(--text-dim); }
+
+    section { margin-top: 64px; }
+    .section-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 24px;
+      gap: 36px;
+    }
+    .section-head .label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-faint);
+      display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0;
+    }
+    .section-head .label::before { content: ''; width: 24px; height: 1px; background: var(--border); }
+    .section-head h2 {
+      font-size: 28px;
+      letter-spacing: -0.02em;
+      font-weight: 600;
+      margin: 0;
+    }
+    .section-head p {
+      margin: 0;
+      color: var(--text-dim);
+      font-size: 15px;
+      max-width: 540px;
+      text-align: right;
+    }
+
+    /* ---------- HERO ---------- */
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .hero .pane {
+      padding: 72px 48px;
+      display: grid; place-items: center;
+      gap: 32px;
+    }
+    .hero .light-pane {
+      background: oklch(0.985 0.008 75);
+      color: oklch(0.22 0.018 55);
+    }
+    .hero .dark-pane {
+      background: oklch(0.115 0.013 240);
+      color: oklch(0.97 0.005 240);
+    }
+    .hero .icon-big { width: 240px; height: 240px; display: grid; place-items: center; }
+    .hero .pane-meta {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: -0.02em;
+      opacity: 0.65;
+      display: flex; gap: 14px;
+    }
+    .hero .pane-meta .sep { opacity: 0.4; }
+
+    /* ---------- VARIANTS ---------- */
+    .variants {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    .variant {
+      background: var(--panel);
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .variant.primary { border-color: color-mix(in oklab, var(--accent) 35%, var(--border)); }
+    .variant .frame {
+      background: var(--panel-2);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 56px 36px;
+      display: grid; place-items: center;
+      min-height: 240px;
+    }
+    .variant .frame .ic { width: 128px; height: 128px; display: grid; place-items: center; }
+    .variant.wordmark .frame .ic { width: auto; height: auto; }
+    .variant .body { padding: 20px 22px 22px; }
+    .variant .name {
+      font-size: 16px; font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0 0 6px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .variant .badge {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--accent);
+      padding: 1px 6px;
+      border: 1px solid color-mix(in oklab, var(--accent) 30%, var(--border));
+      background: var(--accent-soft);
+      border-radius: 3px;
+    }
+    .variant .badge.muted {
+      color: var(--text-dim);
+      background: var(--bg-2);
+      border-color: var(--border);
+    }
+    .variant .desc { font-size: 14px; color: var(--text-dim); line-height: 1.55; margin: 0; }
+
+    /* ---------- ANATOMY ---------- */
+    .anatomy {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 24px;
+      background: var(--panel);
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .anatomy .canvas {
+      background: var(--panel-2);
+      padding: 48px;
+      display: grid; place-items: center;
+      border-right: 1px solid var(--border-soft);
+    }
+    .anatomy .specs {
+      padding: 36px 36px 36px;
+      display: flex; flex-direction: column; gap: 18px;
+    }
+    .anatomy .specs h3 {
+      font-size: 14px; font-weight: 600;
+      margin: 0 0 8px;
+      letter-spacing: -0.01em;
+    }
+    .anatomy .specs p { margin: 0; color: var(--text-dim); font-size: 14px; line-height: 1.6; }
+    .anatomy .spec-row {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 14px;
+      align-items: baseline;
+      padding: 9px 0;
+      border-bottom: 1px dashed var(--border-soft);
+    }
+    .anatomy .spec-row:last-child { border-bottom: 0; }
+    .anatomy .spec-row .k {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-faint);
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+    }
+    .anatomy .spec-row .v {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+    .anatomy .spec-row .v .dim { color: var(--text-faint); }
+
+    /* ---------- SIZE SCALE ---------- */
+    .scale-strip {
+      background: var(--panel);
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      padding: 48px 40px 32px;
+    }
+    .scale-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+    .scale-cell {
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      color: var(--text);
+    }
+    .scale-cell .label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-faint);
+      letter-spacing: -0.02em;
+    }
+    .scale-cell .label b { color: var(--text-dim); font-weight: 500; }
+    .scale-note {
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px dashed var(--border-soft);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-faint);
+      letter-spacing: -0.02em;
+      display: flex; gap: 28px; flex-wrap: wrap;
+    }
+    .scale-note b { color: var(--text-dim); font-weight: 500; }
+
+    /* ---------- ON COLOR ---------- */
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 1px;
+      background: var(--border-soft);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .sw {
+      padding: 36px 12px 14px;
+      display: flex; flex-direction: column; align-items: center; gap: 18px;
+    }
+    .sw .ic { width: 56px; height: 56px; display: grid; place-items: center; }
+    .sw .name {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      letter-spacing: -0.02em;
+      opacity: 0.7;
+      text-align: center;
+      line-height: 1.4;
+    }
+    .sw.warm  { background: oklch(0.985 0.008 75); color: oklch(0.22 0.018 55); }
+    .sw.cream { background: oklch(0.945 0.025 70); color: oklch(0.30 0.04 50); }
+    .sw.white { background: #ffffff; color: oklch(0.18 0.01 240); }
+    .sw.grey  { background: oklch(0.92 0.005 240); color: oklch(0.22 0.018 55); }
+    .sw.dark  { background: oklch(0.115 0.013 240); color: oklch(0.97 0.005 240); }
+    .sw.ink   { background: #000000; color: #ffffff; }
+    .sw.terra { background: oklch(0.56 0.135 40); color: oklch(0.985 0.008 75); }
+    .sw.teal  { background: oklch(0.25 0.06 200); color: oklch(0.92 0.05 200); }
+
+    /* ---------- APP CONTEXTS ---------- */
+    .contexts {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 18px;
+    }
+    .ctx {
+      background: var(--panel);
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      padding: 28px 18px 18px;
+      display: flex; flex-direction: column; align-items: center; gap: 18px;
+    }
+    .ctx .label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-faint);
+      letter-spacing: -0.02em;
+      text-align: center;
+    }
+    .ctx .label b { color: var(--text-dim); display: block; font-weight: 500; font-size: 12px; margin-bottom: 2px; }
+
+    .tile-mac, .tile-ios, .tile-win, .tile-linux, .tile-mono {
+      width: 140px; height: 140px;
+      display: grid; place-items: center;
+      box-shadow: 0 6px 20px oklch(0.06 0 0 / 0.18), 0 1px 0 oklch(1 0 0 / 0.18) inset;
+    }
+    .tile-mac { border-radius: 22.37%; background: oklch(0.985 0.008 75); color: oklch(0.22 0.018 55); box-shadow: 0 6px 20px oklch(0.06 0 0 / 0.12), inset 0 0 0 1px var(--border); }
+    .tile-ios { border-radius: 22.37%; background: oklch(0.115 0.013 240); color: oklch(0.97 0.005 240); }
+    .tile-win { border-radius: 0; background: oklch(0.115 0.013 240); color: oklch(0.97 0.005 240); }
+    .tile-linux { border-radius: 50%; background: oklch(0.985 0.008 75); color: oklch(0.22 0.018 55); box-shadow: 0 6px 20px oklch(0.06 0 0 / 0.12), inset 0 0 0 1px var(--border); }
+    .tile-mono { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 22.37%; box-shadow: none; }
+
+    /* favicon strip */
+    .favicon-row {
+      grid-column: span 5;
+      background: var(--panel);
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      padding: 26px 28px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 36px;
+      align-items: center;
+    }
+    .favicon-row .label-block {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-faint);
+      letter-spacing: -0.02em;
+    }
+    .favicon-row .label-block b { color: var(--text); font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px; }
+    .browser-tab {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 7px 12px 7px 10px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-bottom: 0;
+      border-radius: 8px 8px 0 0;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      margin-right: 4px;
+    }
+    .browser-tab .close { color: var(--text-faint); margin-left: 6px; font-family: var(--font-sans); }
+    .tabs-bar {
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-end;
+    }
+
+    /* ---------- WORDMARK LOCKUPS ---------- */
+    .lockups {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    .lockup {
+      background: var(--panel);
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .lockup .canvas {
+      background: var(--panel-2);
+      padding: 64px 40px;
+      display: grid; place-items: center;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .lockup.dark .canvas {
+      background: oklch(0.115 0.013 240);
+      color: oklch(0.97 0.005 240);
+    }
+    .lockup .meta {
+      padding: 14px 20px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--text-faint);
+      letter-spacing: -0.02em;
+      display: flex; justify-content: space-between;
+    }
+    .lockup .meta b { color: var(--text-dim); font-weight: 500; }
+
+    .wordmark-h {
+      display: flex; align-items: center; gap: 16px;
+    }
+    .wordmark-h .ic { width: 44px; height: 44px; display: grid; place-items: center; }
+    .wordmark-h .text {
+      font-size: 30px; font-weight: 600;
+      letter-spacing: -0.025em;
+      color: currentColor;
+    }
+
+    /* dot-matrix wordmark — 5×7 LED panel, two stacked lines */
+    .wordmark-dm {
+      display: flex; align-items: center; gap: 18px;
+    }
+    .wordmark-dm .ic { display: grid; place-items: center; }
+    .wordmark-dm .dm { display: grid; place-items: center; }
+    .wordmark-dm .dm svg { display: block; }
+
+    .wordmark-v {
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+    }
+    .wordmark-v .ic { width: 68px; height: 68px; display: grid; place-items: center; }
+    .wordmark-v .text {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+    .wordmark-v .text .dim { opacity: 0.55; }
+
+    /* ---------- EXPORT / CODE ---------- */
+    .exports {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+    }
+    .export {
+      background: var(--panel);
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .export header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-soft);
+      background: var(--panel-2);
+    }
+    .export header .n { font-weight: 600; font-size: 14px; letter-spacing: -0.01em; }
+    .export header .h {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--text-faint);
+      letter-spacing: -0.02em;
+    }
+    .export pre {
+      margin: 0;
+      padding: 16px 18px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.55;
+      letter-spacing: -0.02em;
+      color: var(--text-dim);
+      overflow-x: auto;
+      background: var(--panel);
+      max-height: 260px;
+    }
+    .export pre .t { color: oklch(0.55 0.12 240); }
+    .export pre .a { color: oklch(0.50 0.12 305); }
+    .export pre .s { color: oklch(0.50 0.13 145); }
+    .export pre .c { color: var(--text-faint); }
+    .export .actions {
+      display: flex; gap: 6px;
+      padding: 12px 18px;
+      border-top: 1px solid var(--border-soft);
+      background: var(--panel-2);
+    }
+    .export .actions button {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      letter-spacing: -0.02em;
+      color: var(--text-dim);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .export .actions button:hover { color: var(--text); background: var(--bg); }
+    .export .actions .ok {
+      color: oklch(0.55 0.13 145);
+      border-color: color-mix(in oklab, oklch(0.55 0.13 145) 30%, var(--border));
+    }
+
+    /* ---------- FOOTER ---------- */
+    footer.foot {
+      margin-top: 80px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: -0.02em;
+      color: var(--text-faint);
+      display: flex; justify-content: space-between;
+    }
+    footer.foot b { color: var(--text-dim); font-weight: 500; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ================== HEADER ================== -->
+  <header class="top">
+    <div class="top-left">
+      <div class="eyebrow"><span class="dot"></span><span>MemoryCentral · Icon spec v3</span></div>
+      <h1>The mark</h1>
+      <p class="sub">Four corner brackets framing a single solid cell, with one diagonal connector from the top-left bracket to the cell. Two-tone: <span style="color: #818487; font-weight: 600;">neutral gray</span> brackets, <span style="color: #2ab1c0; font-weight: 600;">cyan accent</span> for the connector and the cell. Same SVG holds up on both light and dark surfaces.</p>
+    </div>
+    <div class="top-right">
+      <div><span class="v">Primary mark:</span> Mark</div>
+      <div><span class="v">Artboard:</span> 24 × 24</div>
+      <div><span class="v">Gray:</span> #818487 <span style="opacity: 0.7;">· brackets</span></div>
+      <div><span class="v">Cyan:</span> #2ab1c0 <span style="opacity: 0.7;">· cell + connector</span></div>
+    </div>
+  </header>
+
+  <!-- ================== HERO ================== -->
+  <section data-screen-label="hero">
+    <div class="hero">
+      <div class="pane light-pane">
+        <span class="icon-big" id="hero-light"></span>
+        <div class="pane-meta">
+          <span>Light · warm paper</span>
+          <span class="sep">/</span>
+          <span>same file, no swap</span>
+        </div>
+      </div>
+      <div class="pane dark-pane">
+        <span class="icon-big" id="hero-dark"></span>
+        <div class="pane-meta">
+          <span>Dark · cool ink</span>
+          <span class="sep">/</span>
+          <span>same file, no swap</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================== VARIANTS ================== -->
+  <section data-screen-label="variants">
+    <div class="section-head">
+      <span class="label">01 — variants</span>
+      <p>Three signed-off forms. Primary handles everything; the pushed variant adds one cyber gesture for splash/launch; the wordmark lockup is for headers and documentation.</p>
+    </div>
+    <div class="variants">
+
+      <div class="variant primary">
+        <div class="frame"><span class="ic" id="var-primary"></span></div>
+        <div class="body">
+          <h3 class="name">Mark <span class="badge">Primary</span></h3>
+          <p class="desc">Bracket frame in gray, cell + diagonal connector in cyan. The connector is the asymmetric move — a single line drawing the eye from the outer frame into the central memory point. Use everywhere by default.</p>
+        </div>
+      </div>
+
+      <div class="variant">
+        <div class="frame"><span class="ic" id="var-live"></span></div>
+        <div class="body">
+          <h3 class="name">Live <span class="badge muted">Variant</span></h3>
+          <p class="desc">Adds a dashed horizontal scanline through the artboard — a second cyber gesture stacked on the connector. Reserve for launch tile, splash, and the README hero. Not meant for favicon sizes.</p>
+        </div>
+      </div>
+
+      <div class="variant wordmark">
+        <div class="frame">
+          <div class="wordmark-dm">
+            <span class="ic" id="var-word-ic"></span>
+            <span class="dm" id="var-word-dm"></span>
+          </div>
+        </div>
+        <div class="body">
+          <h3 class="name">Lockup <span class="badge muted">Wordmark</span></h3>
+          <p class="desc">Icon + dot-matrix LED panel. Two stacked lines: <b style="color: #818487;">MEMORY</b> in neutral gray, <b style="color: #2ab1c0;">CENTRAL</b> in the cyan accent that echoes the mark's center cell. Use for splash screens, README hero, and any moment that earns a brand statement.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================== ANATOMY ================== -->
+  <section data-screen-label="anatomy">
+    <div class="section-head">
+      <span class="label">02 — anatomy</span>
+      <p>Every measurement falls on a half-unit so the mark pixel-snaps cleanly at 16, 24, 32. The center cell is the only solid element; everything else is a 1.8-unit stroke.</p>
+    </div>
+    <div class="anatomy">
+      <div class="canvas"><span id="anatomy-icon" style="width: 320px; height: 320px; display: block;"></span></div>
+      <div class="specs">
+        <div>
+          <h3>Construction</h3>
+          <p>Four L-shaped polylines at the corners (5-unit legs, 1.8 stroke, square linecaps) in <code style="color: #818487; font-weight: 600;">#818487</code>. One diagonal line from inside the top-left bracket to the cell's top-left corner, in <code style="color: #2ab1c0; font-weight: 600;">#2ab1c0</code> at 1.5 stroke. One 5×5 filled cell at the center in the same cyan.</p>
+        </div>
+        <div class="spec-row"><div class="k">Artboard</div><div class="v">24 × 24 <span class="dim">units</span></div></div>
+        <div class="spec-row"><div class="k">Bracket leg</div><div class="v">5 <span class="dim">· inset 2 from edge</span></div></div>
+        <div class="spec-row"><div class="k">Center cell</div><div class="v">5 × 5 <span class="dim">· positioned 9.5, 9.5</span></div></div>
+        <div class="spec-row"><div class="k">Connector</div><div class="v">(3, 3) → (9.5, 9.5) <span class="dim">· stroke 1.5</span></div></div>
+        <div class="spec-row"><div class="k">Gray</div><div class="v">#818487 <span class="dim">· brackets only</span></div></div>
+        <div class="spec-row"><div class="k">Cyan</div><div class="v">#2ab1c0 <span class="dim">· cell + connector</span></div></div>
+        <div class="spec-row"><div class="k">Stroke</div><div class="v">1.8 <span class="dim">brackets</span> · 1.5 <span class="dim">connector</span></div></div>
+        <div class="spec-row"><div class="k">Min size</div><div class="v">16 × 16 <span class="dim">px (favicon)</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================== SIZE SCALE ================== -->
+  <section data-screen-label="scale">
+    <div class="section-head">
+      <span class="label">03 — size scale</span>
+      <p>Brackets get visually heavier as the mark shrinks — exactly what's needed for legibility at small sizes. No special small-size variant required.</p>
+    </div>
+    <div class="scale-strip">
+      <div class="scale-row" id="scale-row"></div>
+      <div class="scale-note">
+        <div><b>App icon:</b> 1024, 512, 256, 128</div>
+        <div><b>OS/Dock:</b> 64, 48, 32</div>
+        <div><b>UI in-product:</b> 24, 20</div>
+        <div><b>Favicon / tab:</b> 16</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================== ON COLOR ================== -->
+  <section data-screen-label="on-color">
+    <div class="section-head">
+      <span class="label">04 — on color</span>
+      <p>Two-tone construction means the icon doesn't need to change file between light and dark contexts. Gray reads on either side; cyan stays vibrant against every neutral and saturates further against the brand surfaces.</p>
+    </div>
+    <div class="swatches" id="swatch-row"></div>
+  </section>
+
+  <!-- ================== APP / OS CONTEXTS ================== -->
+  <section data-screen-label="contexts">
+    <div class="section-head">
+      <span class="label">05 — platform tiles</span>
+      <p>Application tile compositions. Tile background sets the tone for each platform; the mark inherits and inverts cleanly.</p>
+    </div>
+    <div class="contexts">
+
+      <div class="ctx">
+        <div class="tile-mac"><span style="width: 88px; height: 88px; display: grid; place-items: center;" id="tile-mac-ic"></span></div>
+        <div class="label"><b>macOS · light</b>1024 · squircle</div>
+      </div>
+
+      <div class="ctx">
+        <div class="tile-ios"><span style="width: 88px; height: 88px; display: grid; place-items: center;" id="tile-ios-ic"></span></div>
+        <div class="label"><b>iOS · dark</b>1024 · squircle</div>
+      </div>
+
+      <div class="ctx">
+        <div class="tile-win"><span style="width: 88px; height: 88px; display: grid; place-items: center;" id="tile-win-ic"></span></div>
+        <div class="label"><b>Windows tile</b>square · dark</div>
+      </div>
+
+      <div class="ctx">
+        <div class="tile-linux"><span style="width: 88px; height: 88px; display: grid; place-items: center;" id="tile-linux-ic"></span></div>
+        <div class="label"><b>Linux</b>circular launcher</div>
+      </div>
+
+      <div class="ctx">
+        <div class="tile-mono"><span style="width: 88px; height: 88px; display: grid; place-items: center;" id="tile-mono-ic"></span></div>
+        <div class="label"><b>Monochrome</b>print · stencil</div>
+      </div>
+
+      <!-- Favicon / browser tab strip -->
+      <div class="favicon-row">
+        <div class="label-block">
+          <b>Browser tab + favicon</b>
+          The mark at 14px in a real tab strip — the four corner brackets and center dot stay distinguishable even at this size because every measurement snaps clean.
+        </div>
+        <div>
+          <div class="tabs-bar">
+            <span class="browser-tab" style="background: var(--panel); border-bottom: 1px solid var(--panel);">
+              <span style="width: 14px; height: 14px; display: grid; place-items: center;" id="tab-ic-1"></span>
+              MemoryCentral
+              <span class="close">×</span>
+            </span>
+            <span class="browser-tab">
+              <span style="width: 14px; height: 14px; display: grid; place-items: center;" id="tab-ic-2"></span>
+              localhost:9980 — recent
+              <span class="close">×</span>
+            </span>
+            <span class="browser-tab" style="opacity: 0.6;">
+              <span style="width: 14px; height: 14px; display: grid; place-items: center;" id="tab-ic-3"></span>
+              docs
+              <span class="close">×</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================== WORDMARK LOCKUPS ================== -->
+  <section data-screen-label="lockups">
+    <div class="section-head">
+      <span class="label">06 — wordmark lockups</span>
+      <p>Two orientations. Horizontal is for headers and inline use; stacked is for splash, README hero, and centered moments.</p>
+    </div>
+    <div class="lockups">
+
+      <div class="lockup">
+        <div class="canvas">
+          <div class="wordmark-h">
+            <span class="ic" id="lock-h-ic"></span>
+            <span class="text">MemoryCentral</span>
+          </div>
+        </div>
+        <div class="meta">
+          <span>Horizontal · light</span>
+          <span><b>Geist 600</b> · −0.025em · 30px</span>
+        </div>
+      </div>
+
+      <div class="lockup dark">
+        <div class="canvas">
+          <div class="wordmark-dm">
+            <span class="ic" id="lock-dm-ic"></span>
+            <span class="dm" id="lock-dm-text"></span>
+          </div>
+        </div>
+        <div class="meta">
+          <span>Dot-matrix · dark</span>
+          <span><b>5×7 LED panel</b> · MEMORY / CENTRAL</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================== EXPORT ================== -->
+  <section data-screen-label="export">
+    <div class="section-head">
+      <span class="label">07 — export</span>
+      <p>Two drop-in SVGs. Both have baked-in colors — <code style="color: #818487; font-weight: 600;">#818487</code> for brackets and <code style="color: #2ab1c0; font-weight: 600;">#2ab1c0</code> for the cell and connector — so a single file covers every theme.</p>
+    </div>
+    <div class="exports">
+
+      <div class="export">
+        <header>
+          <span class="n">mark.svg</span>
+          <span class="h">primary · two-tone</span>
+        </header>
+        <pre id="code-primary"></pre>
+        <div class="actions">
+          <button data-copy="code-primary">Copy SVG</button>
+          <button data-download="mark.svg" data-source="code-primary">Download</button>
+        </div>
+      </div>
+
+      <div class="export">
+        <header>
+          <span class="n">mark-live.svg</span>
+          <span class="h">variant · two-tone + scanline</span>
+        </header>
+        <pre id="code-live"></pre>
+        <div class="actions">
+          <button data-copy="code-live">Copy SVG</button>
+          <button data-download="mark-live.svg" data-source="code-live">Download</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================== FOOTER ================== -->
+  <footer class="foot">
+    <span>MemoryCentral · icon spec v3</span>
+    <span><b>Primary:</b> Mark &nbsp;·&nbsp; <b>Variant:</b> Live &nbsp;·&nbsp; <b>Palette:</b> gray + cyan, baked in</span>
+  </footer>
+</div>
+
+<script>
+  // ============= ICON BUILDERS =============
+  // viewBox is fixed at 24×24. Two-tone palette: neutral gray brackets + cyan accent
+  // for the center cell and the diagonal connecting line. Same SVG works on both
+  // light and dark backgrounds — no theme adaptation needed.
+  const GRAY  = '#818487';   // neutral gray, mid-lightness, visible on light + dark
+  const CYAN  = '#2ab1c0';   // bright cyan accent, derived from dark-theme palette
+
+  function svgOpen(size) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">`;
+  }
+
+  // PRIMARY — corner brackets + diagonal connector + filled center cell
+  // Order: connector → cell → brackets, so brackets render ON TOP of the
+  // connector where they overlap (clean cap at the inside of the top-left bracket).
+  function iconMark(size) {
+    let out = svgOpen(size);
+    out += `<line x1="3" y1="3" x2="9.5" y2="9.5" stroke="${CYAN}" stroke-width="1.5" stroke-linecap="square"/>`;
+    out += `<rect x="9.5" y="9.5" width="5" height="5" fill="${CYAN}"/>`;
+    out += `<g stroke="${GRAY}" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" fill="none">`;
+    out += `<polyline points="2 7 2 2 7 2"/>`;
+    out += `<polyline points="17 2 22 2 22 7"/>`;
+    out += `<polyline points="22 17 22 22 17 22"/>`;
+    out += `<polyline points="7 22 2 22 2 17"/>`;
+    out += `</g>`;
+    return out + '</svg>';
+  }
+
+  // VARIANT — primary + dashed horizontal scanline
+  function iconLive(size) {
+    let out = svgOpen(size);
+    out += `<line x1="0" y1="12" x2="24" y2="12" stroke="${GRAY}" stroke-width="0.5" stroke-dasharray="1 1.5" opacity="0.8"/>`;
+    out += `<line x1="3" y1="3" x2="9.5" y2="9.5" stroke="${CYAN}" stroke-width="1.5" stroke-linecap="square"/>`;
+    out += `<rect x="9.5" y="9.5" width="5" height="5" fill="${CYAN}"/>`;
+    out += `<g stroke="${GRAY}" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" fill="none">`;
+    out += `<polyline points="2 7 2 2 7 2"/>`;
+    out += `<polyline points="17 2 22 2 22 7"/>`;
+    out += `<polyline points="22 17 22 22 17 22"/>`;
+    out += `<polyline points="7 22 2 22 2 17"/>`;
+    out += `</g>`;
+    return out + '</svg>';
+  }
+
+  // ANATOMY — primary with overlay grid + measurements
+  function iconAnatomy(size) {
+    let out = svgOpen(size);
+    // bg grid
+    out += `<g stroke="oklch(0.90 0.013 65)" stroke-width="0.05" fill="none">`;
+    for (let i = 0; i <= 24; i++) {
+      out += `<line x1="${i}" y1="0" x2="${i}" y2="24"/>`;
+      out += `<line x1="0" y1="${i}" x2="24" y2="${i}"/>`;
+    }
+    out += `</g>`;
+    // padding guide
+    out += `<g stroke="oklch(0.56 0.135 40 / 0.35)" stroke-width="0.08" stroke-dasharray="0.5,0.5" fill="none">`;
+    out += `<rect x="2" y="2" width="20" height="20"/>`;
+    out += `</g>`;
+    // the icon
+    out += `<line x1="3" y1="3" x2="9.5" y2="9.5" stroke="${CYAN}" stroke-width="1.5" stroke-linecap="square"/>`;
+    out += `<rect x="9.5" y="9.5" width="5" height="5" fill="${CYAN}"/>`;
+    out += `<g stroke="${GRAY}" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" fill="none">`;
+    out += `<polyline points="2 7 2 2 7 2"/>`;
+    out += `<polyline points="17 2 22 2 22 7"/>`;
+    out += `<polyline points="22 17 22 22 17 22"/>`;
+    out += `<polyline points="7 22 2 22 2 17"/>`;
+    out += `</g>`;
+    // measurement ticks
+    out += `<g font-family="Geist Mono, monospace" font-size="0.85" fill="oklch(0.56 0.135 40)">`;
+    out += `<text x="4.5" y="1.6" text-anchor="middle" opacity="0.85">5</text>`;
+    out += `<text x="12" y="9.0" text-anchor="middle" opacity="0.7">5</text>`;
+    out += `<text x="1.0" y="4.8" text-anchor="middle" opacity="0.55">2</text>`;
+    out += `</g>`;
+    return out + '</svg>';
+  }
+
+  // ============= DOT-MATRIX WORDMARK =============
+  // 5×7 LED font, two stacked lines. MEMORY in gray, CENTRAL in cyan.
+  // Unlit dots are the same gray at low opacity — reads on light AND dark.
+  const FONT_5x7 = {
+    M: [[1,0,0,0,1],[1,1,0,1,1],[1,0,1,0,1],[1,0,1,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],
+    E: [[1,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+    O: [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+    R: [[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0],[1,0,1,0,0],[1,0,0,1,0],[1,0,0,0,1]],
+    Y: [[1,0,0,0,1],[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
+    C: [[0,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[0,1,1,1,1]],
+    N: [[1,0,0,0,1],[1,1,0,0,1],[1,0,1,0,1],[1,0,1,0,1],[1,0,1,0,1],[1,0,0,1,1],[1,0,0,0,1]],
+    T: [[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
+    A: [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],
+    L: [[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+  };
+
+  // Render the dot-matrix at a target pixel height. Width auto-scales by aspect.
+  function dotMatrixWordmark(heightPx) {
+    const line1 = 'MEMORY';
+    const line2 = 'CENTRAL';
+    const charWidth = 5, charHeight = 7, charGap = 1;
+    const lineGap = 1; // empty row between MEMORY and CENTRAL
+    const cols = Math.max(line1.length, line2.length) * (charWidth + charGap) - charGap;
+    const rows = charHeight * 2 + lineGap;
+
+    // Build grid: null = off, GRAY = MEMORY, CYAN = CENTRAL
+    const grid = Array.from({ length: rows }, () => Array(cols).fill(null));
+
+    // MEMORY, left-aligned, top
+    for (let i = 0; i < line1.length; i++) {
+      const pattern = FONT_5x7[line1[i]];
+      const xOff = i * (charWidth + charGap);
+      for (let r = 0; r < charHeight; r++) {
+        for (let c = 0; c < charWidth; c++) {
+          if (pattern[r][c]) grid[r][xOff + c] = GRAY;
+        }
+      }
+    }
+    // CENTRAL, left-aligned, bottom
+    for (let i = 0; i < line2.length; i++) {
+      const pattern = FONT_5x7[line2[i]];
+      const xOff = i * (charWidth + charGap);
+      for (let r = 0; r < charHeight; r++) {
+        for (let c = 0; c < charWidth; c++) {
+          if (pattern[r][c]) grid[r + charHeight + lineGap][xOff + c] = CYAN;
+        }
+      }
+    }
+
+    const pitch = 2;
+    const w = cols * pitch, h = rows * pitch;
+    let out = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="height: ${heightPx}px; width: auto; display: block;">`;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const color = grid[r][c];
+        const cx = c * pitch + pitch / 2;
+        const cy = r * pitch + pitch / 2;
+        if (color) {
+          out += `<circle cx="${cx}" cy="${cy}" r="0.78" fill="${color}"/>`;
+        } else {
+          out += `<circle cx="${cx}" cy="${cy}" r="0.72" fill="${GRAY}" opacity="0.22"/>`;
+        }
+      }
+    }
+    out += '</svg>';
+    return out;
+  }
+
+  // ============= MOUNT =============
+  function set(id, html) { const el = document.getElementById(id); if (el) el.innerHTML = html; }
+
+  // Hero
+  set('hero-light', iconMark(240));
+  set('hero-dark',  iconMark(240));
+
+  // Variants
+  set('var-primary', iconMark(128));
+  set('var-live',    iconLive(128));
+  set('var-word-ic', iconMark(56));
+  set('var-word-dm', dotMatrixWordmark(56));
+
+  // Anatomy
+  set('anatomy-icon', iconAnatomy(320));
+
+  // Scale strip
+  const sizes = [
+    { px: 512, lbl: 'app icon' },
+    { px: 256, lbl: 'tile' },
+    { px: 128, lbl: 'launcher' },
+    { px: 64,  lbl: 'dock' },
+    { px: 48,  lbl: 'os menu' },
+    { px: 32,  lbl: 'list / tray' },
+    { px: 24,  lbl: 'in-product' },
+    { px: 20,  lbl: 'in-product' },
+    { px: 16,  lbl: 'favicon' },
+  ];
+  const row = document.getElementById('scale-row');
+  for (const { px, lbl } of sizes) {
+    const cell = document.createElement('div');
+    cell.className = 'scale-cell';
+    cell.innerHTML = `<span style="width:${px}px; height:${px}px; display:grid; place-items:center;">${iconMark(px)}</span><span class="label"><b>${px}</b> · ${lbl}</span>`;
+    row.appendChild(cell);
+  }
+
+  // Swatches (on color) — all use currentColor; just the surface changes
+  const swatches = [
+    { cls: 'warm',  name: 'warm paper' },
+    { cls: 'cream', name: 'sand' },
+    { cls: 'white', name: 'pure white' },
+    { cls: 'grey',  name: 'system grey' },
+    { cls: 'dark',  name: 'cool ink' },
+    { cls: 'ink',   name: 'pure black' },
+    { cls: 'terra', name: 'brand terra' },
+    { cls: 'teal',  name: 'brand teal' },
+  ];
+  const swatchRow = document.getElementById('swatch-row');
+  for (const sw of swatches) {
+    const cell = document.createElement('div');
+    cell.className = 'sw ' + sw.cls;
+    cell.innerHTML = `<span class="ic">${iconMark(56)}</span><span class="name">${sw.name}</span>`;
+    swatchRow.appendChild(cell);
+  }
+
+  // Tiles — every tile uses currentColor; tile bg sets the contrast
+  set('tile-mac-ic',   iconMark(88));
+  set('tile-ios-ic',   iconMark(88));
+  set('tile-win-ic',   iconMark(88));
+  set('tile-linux-ic', iconMark(88));
+  set('tile-mono-ic',  iconMark(88));
+
+  // Tab favicons
+  set('tab-ic-1', iconMark(14));
+  set('tab-ic-2', iconMark(14));
+  set('tab-ic-3', iconMark(14));
+
+  // Lockups
+  set('lock-h-ic', iconMark(44));
+  set('lock-dm-ic', iconMark(80));
+  set('lock-dm-text', dotMatrixWordmark(80));
+
+  // ============= CODE / EXPORT =============
+  function pretty(src) {
+    return src
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/(\b(?:width|height|viewBox|fill|stroke|xmlns|x|y|x1|y1|x2|y2|stroke-width|stroke-linecap|stroke-linejoin|stroke-dasharray|opacity|points|rx|ry)\b)(=)/g, '<span class="a">$1</span>$2')
+      .replace(/("[^"]*")/g, '<span class="s">$1</span>')
+      .replace(/(&lt;\/?)(svg|g|rect|line|path|polyline|circle)/g, '$1<span class="t">$2</span>');
+  }
+
+  set('code-primary', pretty(iconMark(24)));
+  set('code-live',    pretty(iconLive(24)));
+
+  // Copy & download wiring
+  document.querySelectorAll('button[data-copy]').forEach(b => {
+    b.addEventListener('click', async () => {
+      const el = document.getElementById(b.dataset.copy);
+      const text = el.textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        const orig = b.textContent;
+        b.textContent = '✓ Copied';
+        b.classList.add('ok');
+        setTimeout(() => { b.textContent = orig; b.classList.remove('ok'); }, 1500);
+      } catch (e) { console.error(e); }
+    });
+  });
+
+  document.querySelectorAll('button[data-download]').forEach(b => {
+    b.addEventListener('click', () => {
+      const text = document.getElementById(b.dataset.source).textContent;
+      const blob = new Blob([text], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = b.dataset.download; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+  });
+
+  // Favicon (data URL) — baked-in colors
+  const link = document.createElement('link');
+  link.rel = 'icon'; link.type = 'image/svg+xml';
+  link.href = 'data:image/svg+xml;utf8,' + encodeURIComponent(iconMark(24));
+  document.head.appendChild(link);
+</script>
+
+</body>
+</html>

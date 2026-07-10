@@ -1,0 +1,21 @@
+/* MemoryCentral brand tokens
+   ---------------------------
+   These two colors carry the entire brand. Same values in every theme —
+   they're chosen to read on light AND dark surfaces without adaptation. */
+
+:root {
+  /* Mark / wordmark colors */
+  --mc-mark-gray: #818487;   /* corner brackets + unlit dot-matrix cells */
+  --mc-mark-cyan: #2ab1c0;   /* connector, filled center cell, CENTRAL row */
+
+  /* Off-state for dot-matrix dots: same gray at low opacity */
+  --mc-mark-gray-off: rgba(129, 132, 135, 0.22);
+
+  /* Typography */
+  --mc-font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mc-font-mono: "Geist Mono", ui-monospace, "JetBrains Mono", monospace;
+
+  /* Wordmark spec (when typeset, not dot-matrix) */
+  --mc-wordmark-weight: 600;
+  --mc-wordmark-tracking: -0.025em;
+}
