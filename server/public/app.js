@@ -548,25 +548,14 @@ function renderMemoryDetail(mem) {
     q('#search-input').dispatchEvent(new Event('input'));
     q('#search-input').focus();
   }));
-  actions.appendChild(el('span', { 'class': 'spacer' }));
-  actions.appendChild(actionBtn('Delete', iconTrash(), function() {
-    if (confirm('Delete ' + mem.filename + '? This cannot be undone.')) {
-      fetch('/api/memory/' + mem.id, { method: 'DELETE' }).then(function() {
-        boot();
-      });
-    }
-  }, true));
   detail.appendChild(actions);
 
   var body = el('div', { 'class': 'detail-body', 'html': mdToHtml(mem.content) });
   detail.appendChild(body);
 }
 
-function actionBtn(label, svgEl, handler, danger) {
-  var b = el('button', {
-    'class': danger ? 'danger' : '',
-    'onclick': handler,
-  });
+function actionBtn(label, svgEl, handler) {
+  var b = el('button', { 'onclick': handler });
   b.appendChild(svgEl);
   b.appendChild(document.createTextNode(' ' + label));
   return b;
@@ -579,7 +568,6 @@ function mkSvg(inner) {
 function iconEdit()     { return mkSvg('<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/></svg>'); }
 function iconCopy()     { return mkSvg('<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="1"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>'); }
 function iconSparkles() { return mkSvg('<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M5.6 18.4l2-2M16.4 7.6l2-2"/></svg>'); }
-function iconTrash()    { return mkSvg('<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>'); }
 
 // ============================================================
 // Render: Search results (col 2)
