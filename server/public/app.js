@@ -484,6 +484,7 @@ function renderMemoriesList(projectName, memories) {
       list.forEach(function(m) {
         var row = el('button', {
           'class': 'mem-row',
+          'data-mem-id': '' + m.id,
           'aria-selected': S.selectedMemoryId === m.id ? 'true' : 'false',
           'onclick': function() { selectMemory(m.id); },
         });
@@ -680,11 +681,6 @@ async function selectProject(name) {
 
   var memories = await apiFetch('/api/project/' + encodeURIComponent(name));
   renderMemoriesList(name, memories);
-
-  // Mark mem-row data attrs for selection tracking
-  document.querySelectorAll('#col-memories .mem-row').forEach(function(r, i) {
-    r.dataset.memId = memories[i] ? '' + memories[i].id : '';
-  });
 
   if (memories.length) {
     await selectMemory(memories[0].id);
