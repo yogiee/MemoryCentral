@@ -1,7 +1,5 @@
 node_modules/
-stats/knowledge.db
-stats/knowledge.db-shm
-stats/knowledge.db-wal
+stats/
 projects/
 snapshots/
 dashboard/
