@@ -6,6 +6,8 @@ import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
 import { openDb } from './db.js';
+import { EMBED_PROVIDER, activeModel } from './embed.js';
+import { countPending } from './backlog.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC   = join(__dirname, 'public');
@@ -95,12 +97,13 @@ function getOverview(db) {
     ORDER BY m.synced_at DESC LIMIT 8
   `).all();
 
-  const lastEmbed = db.prepare(
-    `SELECT model FROM embeddings ORDER BY generated_at DESC LIMIT 1`
-  ).get();
-  // Tier 2 is the transformers.js fallback (all-MiniLM-L6-v2); any other model is
-  // the Tier-1 Ollama provider (granite-embedding:30m by default).
-  const tier = !lastEmbed ? 3 : lastEmbed.model === 'all-MiniLM-L6-v2' ? 2 : 1;
+  // Configured embedding provider + how many memories still lack a
+  // current-model vector (saved while the provider was down).
+  const embedStatus = {
+    provider: EMBED_PROVIDER,
+    model: activeModel(),
+    pending: countPending(db),
+  };
 
   // Aggregate byStack
   const stackMap = {};
@@ -140,7 +143,7 @@ function getOverview(db) {
     byType,
     sparkSessions: spark,
     recent: recentRows,
-    tier,
+    embed: embedStatus,
   };
 }
 

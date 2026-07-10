@@ -1,3 +1,7 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
+
 const OLLAMA_BASE = (process.env.OLLAMA_HOST ?? 'http://localhost:11434').replace(/\/$/, '');
 
 // Tier-1 embedding model. Override via EMBED_MODEL.
@@ -28,21 +32,56 @@ export const STACK_TAGS = [
 // the old 2000 cap truncated away. Centralized here so all callers stay consistent.
 const EMBED_MAX_CHARS = Number(process.env.EMBED_MAX_CHARS) || 6000;
 
+// Model used by the "local" provider (@huggingface/transformers, no service required).
+const LOCAL_MODEL = 'all-MiniLM-L6-v2';
+
+// The embedding provider is a SETUP-TIME choice (EMBED_PROVIDER env, or
+// ~/.memorycentralrc.json → "embedProvider": "ollama" | "local") — never a silent
+// runtime fallback. Vectors from different models live in different spaces, so a
+// mid-operation provider swap poisons the table with rows invisible to find_similar
+// (6 MiniLM vectors were stranded exactly that way when per-row Ollama errors
+// triggered the old fallback; found 2026-07-10). When the provider fails, embed()
+// returns null and callers leave the memory pending; backlog.js backfills once
+// the provider works again.
+export const EMBED_PROVIDER = resolveProvider();
+
+function resolveProvider() {
+  const valid = v => v === 'ollama' || v === 'local';
+  if (valid(process.env.EMBED_PROVIDER)) return process.env.EMBED_PROVIDER;
+  try {
+    const rc = JSON.parse(readFileSync(join(homedir(), '.memorycentralrc.json'), 'utf8'));
+    if (valid(rc.embedProvider)) return rc.embedProvider;
+  } catch {}
+  return 'ollama';
+}
+
+// The model every stored vector must match under the active provider. The
+// pending-embedding backlog is defined against this (see backlog.js).
+export function activeModel() {
+  return EMBED_PROVIDER === 'local' ? LOCAL_MODEL : EMBED_MODEL;
+}
+
 // ── Tier 1: Ollama ──────────────────────────────────────────────────────────
 
+// Uses the modern /api/embed endpoint with truncate:true — the legacy
+// /api/embeddings endpoint ERRORS ("input length exceeds the context length")
+// on token-dense content instead of truncating, which is exactly how 5 memories
+// ended up silently embedded by the old MiniLM fallback (found 2026-07-10):
+// 6000 chars of code/URLs can exceed emb-gemma's 2048-token window even though
+// typical prose fits. /api/embed truncates to the context window server-side.
 async function ollamaEmbed(text) {
-  const res = await fetch(`${OLLAMA_BASE}/api/embeddings`, {
+  const res = await fetch(`${OLLAMA_BASE}/api/embed`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: EMBED_MODEL, prompt: text }),
+    body: JSON.stringify({ model: EMBED_MODEL, input: text, truncate: true }),
     signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error(`Ollama embed: ${res.status}`);
-  const { embedding } = await res.json();
-  return { vector: embedding, model: EMBED_MODEL };
+  const { embeddings } = await res.json();
+  return { vector: embeddings[0], model: EMBED_MODEL };
 }
 
-// ── Tier 2: @huggingface/transformers (local, no service required) ──────────
+// ── Provider "local": @huggingface/transformers (no service required) ───────
 
 let _pipe = null;
 
@@ -53,18 +92,21 @@ async function localEmbed(text) {
     _pipe = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { quantized: true });
   }
   const out = await _pipe(text, { pooling: 'mean', normalize: true });
-  return { vector: Array.from(out.data), model: 'all-MiniLM-L6-v2' };
+  return { vector: Array.from(out.data), model: LOCAL_MODEL };
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
-// Returns { vector: number[], model: string } or null (no provider available).
-// Callers must handle null gracefully.
+// Returns { vector: number[], model: string } or null (configured provider down).
+// Callers must handle null gracefully — the memory stays pending, never embedded
+// with a different model.
 export async function embed(text) {
   const input = String(text).slice(0, EMBED_MAX_CHARS);
-  try { return await ollamaEmbed(input); } catch {}
-  try { return await localEmbed(input); } catch {}
-  return null;
+  try {
+    return EMBED_PROVIDER === 'local' ? await localEmbed(input) : await ollamaEmbed(input);
+  } catch {
+    return null;
+  }
 }
 
 export function cosineSimilarity(a, b) {

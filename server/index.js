@@ -7,7 +7,8 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
 import { openDb } from './db.js';
-import { embed, cosineSimilarity } from './embed.js';
+import { embed, cosineSimilarity, EMBED_PROVIDER } from './embed.js';
+import { drainPending, countPending } from './backlog.js';
 import { start as startDashboard } from './dashboard.js';
 import { writeManifest } from './manifest.js';
 
@@ -191,7 +192,7 @@ server.tool(
   async ({ description, limit = 5 }) => {
     const embedResult = await embed(description);
 
-    // Tier 3: no embedding provider — return all content for in-context matching
+    // Degraded mode: provider down — return all content for in-context matching
     if (!embedResult) {
       const all = db.prepare(`
         SELECT m.title, m.filename, m.content, m.memory_type, p.name AS project_name
@@ -200,7 +201,8 @@ server.tool(
       `).all();
       if (!all.length) return { content: [{ type: 'text', text: 'No memories found — run sync first.' }] };
       const text = [
-        `No embedding provider available. Review the ${all.length} memories below and identify which best match: "${description}"`,
+        `⚠ Semantic search degraded — embedding provider "${EMBED_PROVIDER}" is unavailable. ` +
+        `Review the ${all.length} memories below and identify which best match: "${description}"`,
         '',
         ...all.map(r => `**${r.project_name}/${r.filename}** [${r.memory_type}]\n_${r.title}_\n${r.content.slice(0, 300)}${r.content.length > 300 ? '…' : ''}`),
       ].join('\n\n---\n\n');
@@ -229,7 +231,14 @@ server.tool(
       r.content.slice(0, 400) + (r.content.length > 400 ? '…' : ''),
     ].join('\n')).join('\n\n---\n\n');
 
-    return { content: [{ type: 'text', text: `# Similar to "${description}" (via ${model})\n\n${text}` }] };
+    // Memories saved during a provider outage have no current-model vector yet
+    // and are invisible here until the backlog drains — say so.
+    const pending = countPending(db);
+    const pendingNote = pending
+      ? `\n\n_⚠ ${pending} memorie(s) pending embedding are excluded from these results (still findable via search_memories)._`
+      : '';
+
+    return { content: [{ type: 'text', text: `# Similar to "${description}" (via ${model})\n\n${text}${pendingNote}` }] };
   },
 );
 
@@ -284,7 +293,10 @@ server.tool(
     }
 
     const action = existing ? 'Updated' : 'Created';
-    return { content: [{ type: 'text', text: `${action} "${filename}" in ${project}.\nWritten to: ${join(memDir, filename)}` }] };
+    const embedNote = embedResult
+      ? ''
+      : `\n⚠ Embedding pending — provider "${EMBED_PROVIDER}" unavailable. Keyword search works now; semantic search picks it up after auto-backfill.`;
+    return { content: [{ type: 'text', text: `${action} "${filename}" in ${project}.\nWritten to: ${join(memDir, filename)}${embedNote}` }] };
   },
 );
 
@@ -363,5 +375,11 @@ startDashboard(9980);
 // Refresh the consumer manifest for BenchLLAMA every session launch (Ollama-independent,
 // best-effort). See server/manifest.js + docs/consumer-manifest.md.
 writeManifest();
+
+// Backfill embeddings left pending by provider outages (best-effort, non-blocking).
+drainPending(db).then(({ drained, remaining }) => {
+  if (drained)   console.error(`memoryCentral: backfilled ${drained} pending embedding(s)`);
+  if (remaining) console.error(`memoryCentral: ${remaining} embedding(s) still pending — provider "${EMBED_PROVIDER}" down?`);
+}).catch(() => {});
 
 console.error('MemoryCentral MCP server v2 running');
