@@ -217,8 +217,6 @@ export function start(port = 9980, keepAlive = false) {
       handleGet(req, res, port);
     } else if (req.method === 'POST' && req.url === '/api/sync') {
       handleSync(res);
-    } else if (req.method === 'DELETE' && req.url?.startsWith('/api/memory/')) {
-      handleDeleteMemory(req, res);
     } else {
       res.writeHead(405); res.end();
     }
@@ -322,16 +320,4 @@ function handleSync(res) {
     res.writeHead(code === 0 ? 200 : 500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: code === 0, output: out }));
   });
-}
-
-function handleDeleteMemory(req, res) {
-  const id = parseInt(req.url.slice('/api/memory/'.length), 10);
-  if (isNaN(id)) { res.writeHead(400); res.end(); return; }
-  const db = openDb();
-  try {
-    const mem = db.prepare('SELECT m.filename, p.encoded_path FROM memories m JOIN projects p ON p.id = m.project_id WHERE m.id=?').get(id);
-    if (!mem) { res.writeHead(404); res.end(); return; }
-    db.prepare('DELETE FROM memories WHERE id=?').run(id);
-    json(res, { ok: true });
-  } finally { db.close(); }
 }

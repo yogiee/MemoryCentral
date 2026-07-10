@@ -500,7 +500,6 @@ input  { font: inherit; color: inherit; }
 }
 .detail-actions button:hover { color: var(--text); background: var(--hover); }
 .detail-actions .spacer { flex: 1; }
-.detail-actions .danger:hover { color: oklch(0.55 0.18 25); }
 
 .detail-body {
   flex: 1;
