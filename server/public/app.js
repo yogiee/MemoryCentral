@@ -377,16 +377,18 @@ function renderOverview(data) {
 
   side.appendChild(el('div', { 'class': 'side-section-head' },
     el('div', { 'class': 'panel-head' },
-      el('div', { 'class': 'panel-title' }, 'Embeddings tier'),
-      el('div', { 'class': 'panel-sub' }, 'auto-detected')
+      el('div', { 'class': 'panel-title' }, 'Embeddings'),
+      el('div', { 'class': 'panel-sub' }, data.embed ? 'provider: ' + data.embed.provider : '')
     )
   ));
   var tiers = el('div', { 'class': 'tier-list' });
-  var tier = data.tier || 3;
+  var emb = data.embed || { provider: 'ollama', model: '?', pending: 0 };
+  var providerName = emb.provider === 'local' ? 'transformers.js' : 'Ollama';
   [
-    ['Ollama · embeddinggemma:300m', 'tier 1', tier === 1],
-    ['transformers.js · MiniLM-L6', 'fallback', tier === 2],
-    ['In-context Claude matching', 'fallback', tier === 3],
+    [providerName + ' · ' + emb.model, 'active', true],
+    emb.pending > 0
+      ? ['Pending backfill — provider down?', '' + emb.pending, false]
+      : ['Backlog clear', 'ok', true],
   ].forEach(function(row) {
     var rowEl = el('div', { 'class': 'tier-row ' + (row[2] ? 'active' : 'inactive') });
     var check = el('div', { 'class': 'tier-check' });

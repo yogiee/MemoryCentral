@@ -3,7 +3,8 @@ import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
 import { openDb } from './db.js';
-import { embed, extractProjectMeta } from './embed.js';
+import { embed, extractProjectMeta, EMBED_PROVIDER } from './embed.js';
+import { drainPending, countPending } from './backlog.js';
 
 const RC_PATH = join(homedir(), '.memorycentralrc.json');
 
@@ -255,15 +256,29 @@ async function main() {
     process.stdout.write(`  ✓  ${projectName} [extra]${tag}\n`);
   }
 
-  // Generate embeddings for new/changed entries
+  // Generate embeddings for new/changed entries. Failures don't block the sync —
+  // the memory is already in DB + FTS; the vector stays pending and is backfilled
+  // by the drain below (or a later run) once the provider is back.
   if (toEmbed.length) {
     process.stderr.write(`\nGenerating ${toEmbed.length} embedding(s)...\n`);
+    let consecutiveFailures = 0;
     for (const { id, text } of toEmbed) {
+      if (consecutiveFailures >= 3) break; // provider down — stop hammering, leave the rest pending
       const result = await embed(text); // embed() applies EMBED_MAX_CHARS
       if (result) {
         stmts.upsertEmbed.run(id, JSON.stringify(result.vector), result.model, now);
+        consecutiveFailures = 0;
+      } else {
+        consecutiveFailures++;
       }
     }
+  }
+
+  // Backfill vectors left pending by earlier provider outages (probes first, so
+  // this is one cheap failed call when the provider is down).
+  const backlog = await drainPending(db, msg => process.stderr.write(msg + '\n'));
+  if (backlog.drained) {
+    process.stdout.write(`Backfilled ${backlog.drained} pending embedding(s).\n`);
   }
 
   writeDashboard(db);
@@ -273,11 +288,18 @@ async function main() {
     VALUES (?, ?, ?, ?, ?)
   `).run(now, stats.projects, stats.added, stats.updated, stats.unchanged);
 
+  const pending = countPending(db);
   db.close();
 
   process.stdout.write(
     `\nSynced: ${stats.projects} projects | +${stats.added} added | ~${stats.updated} updated | ${stats.unchanged} unchanged\n`
   );
+  if (pending) {
+    process.stdout.write(
+      `⚠  ${pending} memorie(s) pending embedding — provider "${EMBED_PROVIDER}" unavailable. ` +
+      `Keyword search is unaffected; vectors backfill automatically on the next sync/boot with the provider up.\n`
+    );
+  }
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
