@@ -2,9 +2,11 @@ import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
+import { createHash } from 'crypto';
 import { openDb } from './db.js';
 import { embed, extractProjectMeta, EMBED_PROVIDER } from './embed.js';
 import { drainPending, countPending } from './backlog.js';
+import { memoryType, extractTitle } from './meta.js';
 
 const RC_PATH = join(homedir(), '.memorycentralrc.json');
 
@@ -14,31 +16,26 @@ const CLAUDE_PROJ   = join(homedir(), '.claude', 'projects');
 const SNAPSHOTS_DIR = join(REPO, 'snapshots');
 const DASHBOARD_DIR = join(REPO, 'dashboard');
 
+// --refresh-meta [project]: force description/stack re-extraction for all
+// projects, or just the named one.
+const argv = process.argv.slice(2);
+const refreshIdx = argv.indexOf('--refresh-meta');
+const refreshTarget = refreshIdx !== -1 && argv[refreshIdx + 1] && !argv[refreshIdx + 1].startsWith('--')
+  ? argv[refreshIdx + 1] : null;
+const wantsRefresh = name => refreshIdx !== -1 && (!refreshTarget || refreshTarget === name);
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function memoryType(filename) {
-  for (const t of ['feedback', 'project', 'user', 'reference']) {
-    if (filename.startsWith(t)) return t;
-  }
-  return 'general';
-}
-
-function extractTitle(content, filename) {
-  const fm = content.match(/^---[\s\S]*?\nname:\s*(.+)/m);
-  if (fm) return fm[1].trim();
-  const h1 = content.match(/^#\s+(.+)/m);
-  if (h1) return h1[1].trim();
-  return filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
-}
-
-function resolveProjectName(encoded) {
+// Decode a Claude-encoded directory name back to { name, path }. path is null
+// for encodings outside the home dir (we can't reconstruct those reliably).
+function resolveProject(encoded) {
   const home = homedir();
   const homeEnc = home.replace(/[/\\]/g, '-');
-  if (!encoded.startsWith(homeEnc)) return encoded.replace(/^-/, '');
+  if (!encoded.startsWith(homeEnc)) return { name: encoded.replace(/^-/, ''), path: null };
   const rel = encoded.slice(homeEnc.length).replace(/^-/, '');
-  if (!rel) return 'home';
+  if (!rel) return { name: 'home', path: home };
   const tokens = rel.split('-');
   let current = home;
   let i = 0;
@@ -47,7 +44,40 @@ function resolveProjectName(encoded) {
     while (!existsSync(join(current, seg)) && i < tokens.length) seg += '-' + tokens[i++];
     current = join(current, seg);
   }
-  return basename(current);
+  return { name: basename(current), path: current };
+}
+
+// Declared stack from the project's CLAUDE.md `## Stack` block — human-declared
+// truth, trusted over LLM inference (open vocabulary; the STACK_TAGS allowlist
+// applies only to the LLM-extraction fallback). Canonical form is one comma-
+// separated line (`node, sqlite, mcp`); bullet lists are accepted by taking each
+// item's leading token (`- Python 3.11+` → python). Tokens must look like tags —
+// no spaces or prose punctuation — and a block that yields none (free prose)
+// returns null so the LLM fallback handles it instead of us storing garbage.
+function readClaudeMdStack(projectPath) {
+  if (!projectPath) return null;
+  const claudeMd = join(projectPath, 'CLAUDE.md');
+  if (!existsSync(claudeMd)) return null;
+  const src = readFileSync(claudeMd, 'utf8');
+  const head = src.match(/^##\s+Stack[ \t]*\n/m);
+  if (!head) return null;
+  // Block = everything until the next heading (or EOF).
+  const block = src.slice(head.index + head[0].length).split(/\n(?=#)/)[0];
+
+  const candidates = [];
+  for (const raw of block.split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    const bullet = line.match(/^[-*]\s+(.*)/);
+    if (bullet) candidates.push(bullet[1].replace(/`/g, '').split(/\s+/)[0]);
+    else candidates.push(...line.split(','));
+  }
+  const tags = [...new Set(
+    candidates
+      .map(t => t.replace(/`/g, '').trim().toLowerCase())
+      .filter(t => /^[a-z][a-z0-9.@#+_-]{0,23}$/.test(t))
+  )];
+  return tags.length ? tags : null;
 }
 
 function writeSnapshot(db, projectId, name) {
@@ -134,8 +164,10 @@ async function main() {
       ON CONFLICT(name) DO UPDATE SET last_synced=excluded.last_synced, encoded_path=excluded.encoded_path
       RETURNING *
     `),
-    updateMeta: db.prepare(`UPDATE projects SET description=?, stack=? WHERE id=?`),
-    getMemory:  db.prepare(`SELECT id, content FROM memories WHERE project_id=? AND filename=?`),
+    updateMeta:  db.prepare(`UPDATE projects SET description=?, stack=?, meta_hash=? WHERE id=?`),
+    updateStack: db.prepare(`UPDATE projects SET stack=? WHERE id=?`),
+    getMemory:   db.prepare(`SELECT id, content, memory_type, title FROM memories WHERE project_id=? AND filename=?`),
+    updateMemMeta: db.prepare(`UPDATE memories SET memory_type=?, title=? WHERE id=?`),
     insertMem:  db.prepare(`
       INSERT INTO memories (project_id, filename, memory_type, title, content, synced_at)
       VALUES (?, ?, ?, ?, ?, ?) RETURNING id
@@ -159,7 +191,7 @@ async function main() {
       const content = readFileSync(join(dir, filename), 'utf8');
       allContent += content + '\n';
       if (filename === 'MEMORY.md') continue;
-      const type     = memoryType(filename);
+      const type     = memoryType(filename, content);
       const title    = extractTitle(content, filename);
       const existing = stmts.getMemory.get(projectId, filename);
       if (!existing) {
@@ -174,16 +206,47 @@ async function main() {
         toEmbed.push({ id: existing.id, text: `${title}\n\n${content}` });
         stats.updated++; updated++;
       } else {
+        // Content unchanged — but reclassify if the type/title rules evolved
+        // (e.g. frontmatter-type support added 2026-07-10).
+        if (existing.memory_type !== type || existing.title !== title) {
+          stmts.updateMemMeta.run(type, title, existing.id);
+        }
         stats.unchanged++;
       }
     }
     return { allContent, added, updated };
   }
 
-  // Load extra paths config
-  const extraPaths = existsSync(RC_PATH)
-    ? (JSON.parse(readFileSync(RC_PATH, 'utf8')).extraPaths || {})
-    : {};
+  // Load config: extra memory paths + per-project stack overrides
+  const rc = existsSync(RC_PATH) ? JSON.parse(readFileSync(RC_PATH, 'utf8')) : {};
+  const extraPaths     = rc.extraPaths || {};
+  const stackOverrides = rc.stackOverrides || {};
+
+  // Stack hierarchy: rc override → CLAUDE.md `## Stack` block → LLM extraction.
+  // Declared stacks refresh every sync (cheap file read). Descriptions re-extract
+  // when the project's memory content drifts past the stored hash — so they track
+  // reality instead of freezing at first sync — or when --refresh-meta forces it.
+  async function refreshProjectMeta(project, name, projectPath, allContent) {
+    const declared = stackOverrides[name] || readClaudeMdStack(projectPath);
+    if (declared) stmts.updateStack.run(JSON.stringify(declared), project.id);
+
+    if (!allContent) return;
+    const contentHash = createHash('sha256').update(allContent).digest('hex').slice(0, 16);
+    if (project.description && project.meta_hash === contentHash && !wantsRefresh(name)) return;
+
+    process.stderr.write(`  Extracting meta for ${name}...\n`);
+    try {
+      const meta = await extractProjectMeta(allContent);
+      if (!meta) {
+        process.stderr.write(`  Warning: meta extraction unavailable (${name}) — Ollama down or model missing\n`);
+        return;
+      }
+      const stack = declared || meta.stack;
+      stmts.updateMeta.run(meta.description, JSON.stringify(stack), contentHash, project.id);
+    } catch (err) {
+      process.stderr.write(`  Warning: meta extraction failed (${name}): ${err.message}\n`);
+    }
+  }
 
   const seenProjects = new Set();
 
@@ -195,7 +258,7 @@ async function main() {
     const mdFiles = readdirSync(memDir).filter(f => f.endsWith('.md') && !f.startsWith('_'));
     if (!mdFiles.length) continue;
 
-    const name    = resolveProjectName(entry.name);
+    const { name, path: projectPath } = resolveProject(entry.name);
     const project = stmts.upsertProject.get(name, entry.name, now);
     stats.projects++;
     seenProjects.add(name);
@@ -213,20 +276,7 @@ async function main() {
       pAdded += extra.added; pUpdated += extra.updated;
     }
 
-    // Extract description + stack via Ollama if missing
-    if (!project.description) {
-      process.stderr.write(`  Extracting meta for ${name}...\n`);
-      try {
-        const meta = await extractProjectMeta(allContent);
-        if (meta) {
-          stmts.updateMeta.run(meta.description, JSON.stringify(meta.stack), project.id);
-        } else {
-          process.stderr.write(`  Warning: meta extraction unavailable (${name}) — Ollama down or model missing\n`);
-        }
-      } catch (err) {
-        process.stderr.write(`  Warning: meta extraction failed (${name}): ${err.message}\n`);
-      }
-    }
+    await refreshProjectMeta(project, name, projectPath, allContent);
 
     writeSnapshot(db, project.id, name);
     const tag = pAdded || pUpdated ? ` +${pAdded} ~${pUpdated}` : ' (no changes)';
@@ -245,12 +295,9 @@ async function main() {
       allContent += extra.allContent;
       pAdded += extra.added; pUpdated += extra.updated;
     }
-    if (!project.description && allContent) {
-      try {
-        const meta = await extractProjectMeta(allContent);
-        if (meta) stmts.updateMeta.run(meta.description, JSON.stringify(meta.stack), project.id);
-      } catch {}
-    }
+
+    await refreshProjectMeta(project, projectName, null, allContent);
+
     writeSnapshot(db, project.id, projectName);
     const tag = pAdded || pUpdated ? ` +${pAdded} ~${pUpdated}` : ' (no changes)';
     process.stdout.write(`  ✓  ${projectName} [extra]${tag}\n`);
