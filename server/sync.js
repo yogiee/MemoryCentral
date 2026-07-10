@@ -217,7 +217,11 @@ async function main() {
       process.stderr.write(`  Extracting meta for ${name}...\n`);
       try {
         const meta = await extractProjectMeta(allContent);
-        stmts.updateMeta.run(meta.description, JSON.stringify(meta.stack), project.id);
+        if (meta) {
+          stmts.updateMeta.run(meta.description, JSON.stringify(meta.stack), project.id);
+        } else {
+          process.stderr.write(`  Warning: meta extraction unavailable (${name}) — Ollama down or model missing\n`);
+        }
       } catch (err) {
         process.stderr.write(`  Warning: meta extraction failed (${name}): ${err.message}\n`);
       }
@@ -243,7 +247,7 @@ async function main() {
     if (!project.description && allContent) {
       try {
         const meta = await extractProjectMeta(allContent);
-        stmts.updateMeta.run(meta.description, JSON.stringify(meta.stack), project.id);
+        if (meta) stmts.updateMeta.run(meta.description, JSON.stringify(meta.stack), project.id);
       } catch {}
     }
     writeSnapshot(db, project.id, projectName);

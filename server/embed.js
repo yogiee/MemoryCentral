@@ -5,7 +5,23 @@ const OLLAMA_BASE = (process.env.OLLAMA_HOST ?? 'http://localhost:11434').replac
 // granite-embedding:30m (whose 512-token window truncated 66% of our memories).
 // emb-gemma: 768-dim (drop-in), clean retrieval to ~8k chars, beats nomic on every
 // discrimination metric on our corpus. Full rationale: docs/embedding-eval-2026-06-13.md.
-const EMBED_MODEL = process.env.EMBED_MODEL ?? 'embeddinggemma:300m';
+export const EMBED_MODEL = process.env.EMBED_MODEL ?? 'embeddinggemma:300m';
+
+// Ollama model used by extractProjectMeta() to derive project description + stack
+// tags during sync. Manual quality pin (not leaderboard-selected): extraction runs
+// only for description-less projects, so accuracy matters more than speed. gemma4:latest
+// gave the cleanest, allowlist-respecting tags in testing (2026-06-15) — replacing the
+// stale llama3.1:latest default, which had been uninstalled and 404'd silently.
+// Centralized + exported so the consumer manifest (manifest.js) reports one source of truth.
+export const EXTRACT_MODEL = process.env.EXTRACT_MODEL ?? 'gemma4:latest';
+
+// Closed vocabulary for project stack tags. Used both to prompt the extractor and to
+// post-filter its output — no model reliably respects an in-prompt allowlist, so we
+// enforce it here. Keep in sync with find_by_stack expectations.
+export const STACK_TAGS = [
+  'swift', 'swiftui', 'node', 'typescript', 'python', 'react', 'electron',
+  'bash', 'homeassistant', 'go', 'rust', 'wordpress', 'html', 'css',
+];
 
 // Max input chars per embed. Raised 2000→6000 with the emb-gemma switch — sits inside
 // emb-gemma's clean ~8k-char (2048-tok) window, capturing long-memory body content that
@@ -72,7 +88,7 @@ export async function extractProjectMeta(content) {
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
       body: JSON.stringify({
-        model: 'llama3.1:latest',
+        model: EXTRACT_MODEL,
         messages: [
           {
             role: 'system',
@@ -83,7 +99,7 @@ export async function extractProjectMeta(content) {
             content: `Read these project memory files and extract metadata. Respond with ONLY this JSON:
 {"description": "<one sentence about what this project actually does>", "stack": ["<real tech tags>"]}
 
-Valid tech tags: swift, swiftui, node, typescript, python, react, electron, bash, homeassistant, go, rust, wordpress, html, css
+Valid tech tags: ${STACK_TAGS.join(', ')}
 
 Project memory files:
 ${content.slice(0, 3000)}`,
@@ -99,7 +115,16 @@ ${content.slice(0, 3000)}`,
     const text = data?.message?.content || '';
     const match = text.match(/\{[\s\S]*?\}/);
     if (!match) return null;
-    return JSON.parse(match[0]);
+    const meta = JSON.parse(match[0]);
+    // Enforce the closed tag vocabulary — models leak out-of-allowlist tags (e.g.
+    // "postgres") and over-tag, so filter to known tags and de-dupe.
+    if (Array.isArray(meta.stack)) {
+      const allow = new Set(STACK_TAGS);
+      meta.stack = [...new Set(meta.stack.map(t => String(t).toLowerCase().trim()))].filter(t => allow.has(t));
+    } else {
+      meta.stack = [];
+    }
+    return meta;
   } catch {
     clearTimeout(timeout);
     return null;
