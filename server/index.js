@@ -9,6 +9,7 @@ import { homedir } from 'os';
 import { openDb } from './db.js';
 import { embed, cosineSimilarity, EMBED_PROVIDER } from './embed.js';
 import { drainPending, countPending } from './backlog.js';
+import { memoryType, extractTitle } from './meta.js';
 import { start as startDashboard } from './dashboard.js';
 import { writeManifest } from './manifest.js';
 
@@ -17,21 +18,6 @@ const REPO         = join(__dirname, '..');
 const DASHBOARD    = join(REPO, 'dashboard', 'DASHBOARD.md');
 const SYNC_SCRIPT  = join(REPO, 'sync.js');
 const HOME         = homedir();
-
-function memoryType(filename) {
-  for (const t of ['feedback', 'project', 'user', 'reference']) {
-    if (filename.startsWith(t)) return t;
-  }
-  return 'general';
-}
-
-function extractTitle(content, filename) {
-  const fm = content.match(/^---[\s\S]*?\nname:\s*(.+)/m);
-  if (fm) return fm[1].trim();
-  const h1 = content.match(/^#\s+(.+)/m);
-  if (h1) return h1[1].trim();
-  return filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
-}
 
 const db = openDb();
 
@@ -263,7 +249,7 @@ server.tool(
     mkdirSync(memDir, { recursive: true });
     writeFileSync(join(memDir, filename), content);
 
-    const type     = memoryType(filename);
+    const type     = memoryType(filename, content);
     const title    = extractTitle(content, filename);
     const now      = new Date().toISOString();
     const existing = db.prepare('SELECT id, content FROM memories WHERE project_id=? AND filename=?').get(p.id, filename);

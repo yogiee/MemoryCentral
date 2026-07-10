@@ -24,7 +24,8 @@ function initSchema(db) {
       encoded_path TEXT    UNIQUE NOT NULL,
       description  TEXT    DEFAULT '',
       stack        TEXT    DEFAULT '[]',
-      last_synced  TEXT
+      last_synced  TEXT,
+      meta_hash    TEXT
     );
 
     CREATE TABLE IF NOT EXISTS memories (
@@ -62,4 +63,8 @@ function initSchema(db) {
       files_unchanged  INTEGER DEFAULT 0
     );
   `);
+
+  // Migration for DBs created before 2026-07-10: content hash that gates
+  // description re-extraction (see sync.js). No-op once the column exists.
+  try { db.exec('ALTER TABLE projects ADD COLUMN meta_hash TEXT'); } catch {}
 }
