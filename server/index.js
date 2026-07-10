@@ -9,6 +9,7 @@ import { homedir } from 'os';
 import { openDb } from './db.js';
 import { embed, cosineSimilarity } from './embed.js';
 import { start as startDashboard } from './dashboard.js';
+import { writeManifest } from './manifest.js';
 
 const __dirname    = dirname(fileURLToPath(import.meta.url));
 const REPO         = join(__dirname, '..');
@@ -358,4 +359,9 @@ server.prompt(
 const transport = new StdioServerTransport();
 await server.connect(transport);
 startDashboard(9980);
+
+// Refresh the consumer manifest for BenchLLAMA every session launch (Ollama-independent,
+// best-effort). See server/manifest.js + docs/consumer-manifest.md.
+writeManifest();
+
 console.error('MemoryCentral MCP server v2 running');

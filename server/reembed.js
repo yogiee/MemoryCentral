@@ -13,6 +13,7 @@
 
 import { openDb } from './db.js';
 import { embed } from './embed.js';
+import { writeManifest } from './manifest.js';
 
 const staleOnly = process.argv.includes('--stale');
 const now = new Date().toISOString();
@@ -65,6 +66,11 @@ for (const r of targets) {
 // Report any remaining model heterogeneity so the operator knows the state.
 const breakdown = db.prepare('SELECT model, COUNT(*) AS n FROM embeddings GROUP BY model ORDER BY n DESC').all();
 db.close();
+
+// A re-embed is the moment the active embedding assignment changes — refresh the
+// consumer manifest so BenchLLAMA sees the new model in our working set.
+const manifestPath = writeManifest();
+if (manifestPath) process.stdout.write(`Consumer manifest updated: ${manifestPath}\n`);
 
 process.stdout.write(`\nDone: ${done} re-embedded, ${failed} failed.\n`);
 process.stdout.write('Embeddings table now:\n');
