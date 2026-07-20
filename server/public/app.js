@@ -66,6 +66,21 @@ function relTime(iso) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+// Numeric "last updated" timestamp for sorting/display (missing/invalid → oldest).
+// Prefers lastActivity (newest memory in the project) since last_synced is
+// stamped uniformly across all projects on each full sync.
+function syncTs(p) {
+  if (!p) return 0;
+  var v = p.lastActivity || p.lastSynced;
+  if (!v) return 0;
+  var t = new Date(v).getTime();
+  return isNaN(t) ? 0 : t;
+}
+
+function bySyncedDesc(a, b) {
+  return syncTs(b) - syncTs(a);
+}
+
 function fmtSize(bytes) {
   if (!bytes) return '';
   if (bytes < 1024) return bytes + ' B';
@@ -208,7 +223,13 @@ function renderProjects() {
     groups[key].push(p);
   });
 
-  var keys = Object.keys(groups).sort();
+  // Dynamic recency ordering: newest project on top. Sort projects within each
+  // group by last-synced (desc), then float the group holding the most recent
+  // project to the top by its freshest member.
+  Object.keys(groups).forEach(function(k) { groups[k].sort(bySyncedDesc); });
+  var keys = Object.keys(groups).sort(function(a, b) {
+    return syncTs(groups[b][0]) - syncTs(groups[a][0]);
+  });
   keys.forEach(function(stackKey) {
     var list = groups[stackKey];
     var group = el('div', { 'class': 'stack-group' });
@@ -246,7 +267,7 @@ function renderProjects() {
       });
       card.appendChild(el('div', { 'class': 'project-meta' },
         dots,
-        el('span', { 'class': 'modified' }, relTime(p.lastSynced))
+        el('span', { 'class': 'modified' }, relTime(p.lastActivity || p.lastSynced))
       ));
       // stack tags (first 4)
       if (p.stack && p.stack.length) {

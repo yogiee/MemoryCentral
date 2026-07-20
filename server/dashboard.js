@@ -28,10 +28,11 @@ const MIME = {
 function getProjects(db) {
   const projects = db.prepare(`
     SELECT p.id, p.name, p.description, p.stack, p.last_synced,
-           COUNT(m.id) AS mem_count
+           COUNT(m.id) AS mem_count,
+           MAX(m.synced_at) AS last_activity
     FROM projects p
     LEFT JOIN memories m ON m.project_id = p.id
-    GROUP BY p.id ORDER BY p.name
+    GROUP BY p.id ORDER BY last_activity DESC, p.name
   `).all();
 
   const typeCounts = db.prepare(`
@@ -51,6 +52,7 @@ function getProjects(db) {
     description: p.description || null,
     stack: JSON.parse(p.stack || '[]'),
     lastSynced: p.last_synced,
+    lastActivity: p.last_activity || p.last_synced,
     memCount: p.mem_count,
     types: typeMap[p.id] || {},
   }));
