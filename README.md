@@ -86,7 +86,7 @@ Three-column Finder-style browser — always visible:
 
 | Column | Content |
 |--------|---------|
-| **Projects** (320px) | All tracked projects grouped by primary stack tag |
+| **Projects** (320px) | All tracked projects grouped by primary stack tag, ordered by most recent memory activity |
 | **Memories** (360px) | Memory list for the selected project, search results, or recent feed |
 | **Detail** | Full memory content rendered from Markdown |
 
