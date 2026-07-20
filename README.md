@@ -96,7 +96,7 @@ Three-column Finder-style browser — always visible:
 - **Project view** — memories grouped by type (project / reference / user / feedback) with type-filter pills
 - **Full-text search** — FTS5 with `<mark>` highlighted excerpts, debounced as you type
 - **Recent activity** — last 12 modified memories across all projects via rail button
-- **Memory detail** — Markdown rendered in-pane; Copy path, Find similar, and Delete actions
+- **Memory detail** — Markdown rendered in-pane; Copy path and Find similar actions
 - **Light / Dark / System** themes — persisted to `localStorage`
 - **Sync button** — triggers a full harvest from the rail without leaving the browser
 - **Cmd-K** — focuses search from anywhere; Esc clears and returns to previous view
