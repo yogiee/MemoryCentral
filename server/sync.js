@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join, dirname, basename } from 'path';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
 import { createHash } from 'crypto';
@@ -7,6 +7,7 @@ import { openDb } from './db.js';
 import { embed, extractProjectMeta, EMBED_PROVIDER } from './embed.js';
 import { drainPending, countPending } from './backlog.js';
 import { memoryType, extractTitle } from './meta.js';
+import { resolveProject } from './paths.js';
 
 const RC_PATH = join(homedir(), '.memorycentralrc.json');
 
@@ -27,25 +28,6 @@ const wantsRefresh = name => refreshIdx !== -1 && (!refreshTarget || refreshTarg
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-// Decode a Claude-encoded directory name back to { name, path }. path is null
-// for encodings outside the home dir (we can't reconstruct those reliably).
-function resolveProject(encoded) {
-  const home = homedir();
-  const homeEnc = home.replace(/[/\\]/g, '-');
-  if (!encoded.startsWith(homeEnc)) return { name: encoded.replace(/^-/, ''), path: null };
-  const rel = encoded.slice(homeEnc.length).replace(/^-/, '');
-  if (!rel) return { name: 'home', path: home };
-  const tokens = rel.split('-');
-  let current = home;
-  let i = 0;
-  while (i < tokens.length) {
-    let seg = tokens[i++];
-    while (!existsSync(join(current, seg)) && i < tokens.length) seg += '-' + tokens[i++];
-    current = join(current, seg);
-  }
-  return { name: basename(current), path: current };
-}
 
 // Declared stack from the project's CLAUDE.md `## Stack` block — human-declared
 // truth, trusted over LLM inference (open vocabulary; the STACK_TAGS allowlist
@@ -154,7 +136,7 @@ async function main() {
   mkdirSync(SNAPSHOTS_DIR, { recursive: true });
   mkdirSync(DASHBOARD_DIR, { recursive: true });
 
-  const stats  = { projects: 0, added: 0, updated: 0, unchanged: 0 };
+  const stats  = { projects: 0, added: 0, updated: 0, unchanged: 0, failed: 0 };
   const toEmbed = [];
 
   const stmts = {
@@ -258,29 +240,38 @@ async function main() {
     const mdFiles = readdirSync(memDir).filter(f => f.endsWith('.md') && !f.startsWith('_'));
     if (!mdFiles.length) continue;
 
-    const { name, path: projectPath } = resolveProject(entry.name);
-    const project = stmts.upsertProject.get(name, entry.name, now);
-    stats.projects++;
-    seenProjects.add(name);
+    // One malformed project directory must not abort indexing for every project
+    // sorting after it — readdirSync order is arbitrary, so an uncaught throw here
+    // silently drops an unpredictable tail of the corpus. Skip loudly instead.
+    try {
+      const { name, path: projectPath } = resolveProject(entry.name);
+      const project = stmts.upsertProject.get(name, entry.name, now);
+      seenProjects.add(name);
 
-    let pAdded = 0, pUpdated = 0, allContent = '';
+      let pAdded = 0, pUpdated = 0, allContent = '';
 
-    const std = await processDir(memDir, project.id, name);
-    allContent += std.allContent;
-    pAdded += std.added; pUpdated += std.updated;
+      const std = await processDir(memDir, project.id, name);
+      allContent += std.allContent;
+      pAdded += std.added; pUpdated += std.updated;
 
-    // Extra paths for this project
-    for (const extraDir of (extraPaths[name] || [])) {
-      const extra = await processDir(extraDir, project.id, name);
-      allContent += extra.allContent;
-      pAdded += extra.added; pUpdated += extra.updated;
+      // Extra paths for this project
+      for (const extraDir of (extraPaths[name] || [])) {
+        const extra = await processDir(extraDir, project.id, name);
+        allContent += extra.allContent;
+        pAdded += extra.added; pUpdated += extra.updated;
+      }
+
+      await refreshProjectMeta(project, name, projectPath, allContent);
+
+      writeSnapshot(db, project.id, name);
+      stats.projects++;
+      const tag = pAdded || pUpdated ? ` +${pAdded} ~${pUpdated}` : ' (no changes)';
+      process.stdout.write(`  ✓  ${name}${tag}\n`);
+    } catch (err) {
+      stats.failed++;
+      process.stderr.write(`  ✗  ${entry.name}: ${err.message} — skipped\n`);
+      continue;
     }
-
-    await refreshProjectMeta(project, name, projectPath, allContent);
-
-    writeSnapshot(db, project.id, name);
-    const tag = pAdded || pUpdated ? ` +${pAdded} ~${pUpdated}` : ' (no changes)';
-    process.stdout.write(`  ✓  ${name}${tag}\n`);
   }
 
   // Extra-paths-only projects (no ~/.claude/projects/ entry)
@@ -341,6 +332,11 @@ async function main() {
   process.stdout.write(
     `\nSynced: ${stats.projects} projects | +${stats.added} added | ~${stats.updated} updated | ${stats.unchanged} unchanged\n`
   );
+  if (stats.failed) {
+    process.stdout.write(
+      `⚠  ${stats.failed} project(s) skipped after errors — see the ✗ lines above; those memories are NOT indexed.\n`
+    );
+  }
   if (pending) {
     process.stdout.write(
       `⚠  ${pending} memorie(s) pending embedding — provider "${EMBED_PROVIDER}" unavailable. ` +
