@@ -6,6 +6,9 @@ import { readdirSync, readFileSync, writeFileSync, existsSync, statSync } from '
 import { join } from 'path';
 import { homedir } from 'os';
 import { gzipSync } from 'zlib';
+// Shared with sync.js. This file used to take the last hyphen token instead,
+// which mislabelled every hyphenated project (KODI-Playground -> "Playground").
+import { resolveProjectName } from './server/paths.js';
 
 const CLAUDE_PROJ = join(homedir(), '.claude', 'projects');
 const date        = new Date().toISOString().slice(0, 10);
@@ -18,15 +21,6 @@ if (!existsSync(CLAUDE_PROJ)) {
 
 const memories  = {};  // { encodedPath: { filename: content } }
 const manifest  = {};  // { encodedPath: humanReadableName }
-
-function resolveProjectName(encoded) {
-  // Best-effort: strip home prefix encoding and return last path segment
-  const home    = homedir();
-  const homeEnc = home.replace(/[/\\]/g, '-');
-  if (!encoded.startsWith(homeEnc)) return encoded.replace(/^-/, '');
-  const rel = encoded.slice(homeEnc.length).replace(/^-/, '');
-  return rel ? rel.split('-').at(-1) : 'home';
-}
 
 let fileCount = 0;
 for (const entry of readdirSync(CLAUDE_PROJ, { withFileTypes: true })) {
