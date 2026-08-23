@@ -83,9 +83,10 @@ export function buildManifest(generatedISO) {
     rationale: {
       embed: 'requirements-fit: embeddinggemma:300m == rankings.embedding_long[0]. Short-battery ' +
              'and efficiency (quality/GB) winners both = granite-embedding:30m, which fails us.',
-      extract: 'gemma4:12b manually pinned for extraction accuracy (rare, not latency-sensitive): ' +
-               'rankings.workers[0], instruction_adherence 1.0, prompt_sigma 0.0017. Pinned ' +
-               '2026-08-23 after gemma4:latest was uninstalled and 404d silently — the second ' +
+      extract: 'gemma4:e4b-mlx pinned 2026-08-23 (workers #5, instruction_adherence 1.0). Not the ' +
+               'top worker: this call sits on the Stop hook with a 60s abort budget, and measured ' +
+               'on the real payload gemma4:12b needs 82s — unusable here whatever its scores. ' +
+               'Replaced gemma4:latest after it was uninstalled and 404d silently, the second ' +
                'time this pin has died that way (llama3.1:latest, 2026-06-15).',
     },
   };

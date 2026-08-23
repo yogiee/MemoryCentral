@@ -12,18 +12,29 @@ const OLLAMA_BASE = (process.env.OLLAMA_HOST ?? 'http://localhost:11434').replac
 export const EMBED_MODEL = process.env.EMBED_MODEL ?? 'embeddinggemma:300m';
 
 // Ollama model used by extractProjectMeta() to derive project description + stack
-// tags during sync. Manual quality pin (not leaderboard-selected): extraction runs
-// only for description-less projects, so accuracy matters more than speed — which is
-// why this is the one place we accept the slowest model in the fleet (24.5 tps).
-// gemma4:12b is BenchLLAMA's #1 worker with the fleet's best instruction adherence
-// (1.0) and prompt stability (sigma 0.0017) — the two things a fixed-shape JSON
-// extractor actually needs. Pinned 2026-08-23, replacing gemma4:latest after it was
-// uninstalled and began 404'ing silently (see the !res.ok null return below) — the
-// same failure mode that took out the llama3.1:latest pin it had itself replaced on
-// 2026-06-15. Two strikes: verify this tag still resolves before trusting a sync's
-// extracted metadata.
+// tags during sync. Manual pin (not leaderboard-selected), but constrained by the
+// EXTRACT_TIMEOUT_MS budget below — this call sits on the Stop hook, and re-runs
+// whenever a project's memory content drifts, so it is NOT the rare event the old
+// "accuracy over speed" note assumed. Measured on the real 3000-char payload:
+// gemma4:12b 82.1s, gemma4:12b-mlx 30.3s, gemma4:e4b-mlx 24.2s. The #1 worker is
+// unusable here regardless of its scores; e4b-mlx is workers #5 with the same
+// instruction_adherence (1.0) and clears the budget with room to spare.
+// Note the stack tags mostly don't depend on this — a project's `## Stack` block in
+// CLAUDE.md wins when present (see refreshProjectMeta), so in practice the model
+// supplies the description and little else.
+// Pinned 2026-08-23, replacing gemma4:latest after it was uninstalled and began
+// 404'ing silently — the same failure mode that took out the llama3.1:latest pin it
+// had itself replaced on 2026-06-15. Two strikes: verify this tag still resolves
+// before trusting a sync's extracted metadata.
 // Centralized + exported so the consumer manifest (manifest.js) reports one source of truth.
-export const EXTRACT_MODEL = process.env.EXTRACT_MODEL ?? 'gemma4:12b';
+export const EXTRACT_MODEL = process.env.EXTRACT_MODEL ?? 'gemma4:e4b-mlx';
+
+// Abort budget for one extraction. Raised 30s → 60s on 2026-08-23: the pinned model
+// needs ~24s on a real corpus, and 30s left only 19% headroom — thin enough that a
+// busy GPU or a larger memory set silently returned null and looked like a dead pin.
+// Keep the pin comfortably inside this; if a candidate needs more, it's the wrong
+// model for a hook that runs at session end, not a reason to raise the ceiling.
+export const EXTRACT_TIMEOUT_MS = Number(process.env.EXTRACT_TIMEOUT_MS ?? 60_000);
 
 // Closed vocabulary for project stack tags. Used both to prompt the extractor and to
 // post-filter its output — no model reliably respects an in-prompt allowlist, so we
@@ -129,7 +140,7 @@ export function cosineSimilarity(a, b) {
 // Returns { description, stack } or null if Ollama unavailable.
 export async function extractProjectMeta(content) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
+  const timeout = setTimeout(() => controller.abort(), EXTRACT_TIMEOUT_MS);
   try {
     const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
       method: 'POST',
