@@ -13,11 +13,17 @@ export const EMBED_MODEL = process.env.EMBED_MODEL ?? 'embeddinggemma:300m';
 
 // Ollama model used by extractProjectMeta() to derive project description + stack
 // tags during sync. Manual quality pin (not leaderboard-selected): extraction runs
-// only for description-less projects, so accuracy matters more than speed. gemma4:latest
-// gave the cleanest, allowlist-respecting tags in testing (2026-06-15) — replacing the
-// stale llama3.1:latest default, which had been uninstalled and 404'd silently.
+// only for description-less projects, so accuracy matters more than speed — which is
+// why this is the one place we accept the slowest model in the fleet (24.5 tps).
+// gemma4:12b is BenchLLAMA's #1 worker with the fleet's best instruction adherence
+// (1.0) and prompt stability (sigma 0.0017) — the two things a fixed-shape JSON
+// extractor actually needs. Pinned 2026-08-23, replacing gemma4:latest after it was
+// uninstalled and began 404'ing silently (see the !res.ok null return below) — the
+// same failure mode that took out the llama3.1:latest pin it had itself replaced on
+// 2026-06-15. Two strikes: verify this tag still resolves before trusting a sync's
+// extracted metadata.
 // Centralized + exported so the consumer manifest (manifest.js) reports one source of truth.
-export const EXTRACT_MODEL = process.env.EXTRACT_MODEL ?? 'gemma4:latest';
+export const EXTRACT_MODEL = process.env.EXTRACT_MODEL ?? 'gemma4:12b';
 
 // Closed vocabulary for project stack tags. Used both to prompt the extractor and to
 // post-filter its output — no model reliably respects an in-prompt allowlist, so we
@@ -152,7 +158,17 @@ ${content.slice(0, 3000)}`,
       }),
     });
     clearTimeout(timeout);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // Name the model and the status. sync.js already warns on a null return, but only as
+      // "Ollama down or model missing" — ambiguous enough that two dead pins (llama3.1,
+      // then gemma4:latest) were read as "Ollama isn't running" and left alone for months.
+      // A 404 naming the tag is the difference between noise and an actionable line.
+      process.stderr.write(
+        `extractProjectMeta: ${EXTRACT_MODEL} returned HTTP ${res.status}` +
+        `${res.status === 404 ? ' — model not installed (ollama pull ' + EXTRACT_MODEL + ')' : ''}\n`
+      );
+      return null;
+    }
     const data = await res.json();
     const text = data?.message?.content || '';
     const match = text.match(/\{[\s\S]*?\}/);
