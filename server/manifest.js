@@ -83,8 +83,10 @@ export function buildManifest(generatedISO) {
     rationale: {
       embed: 'requirements-fit: embeddinggemma:300m == rankings.embedding_long[0]. Short-battery ' +
              'and efficiency (quality/GB) winners both = granite-embedding:30m, which fails us.',
-      extract: 'gemma4:latest manually pinned for extraction accuracy (rare, not latency-sensitive); ' +
-               'replaced the stale, uninstalled llama3.1:latest default on 2026-06-15.',
+      extract: 'gemma4:12b manually pinned for extraction accuracy (rare, not latency-sensitive): ' +
+               'rankings.workers[0], instruction_adherence 1.0, prompt_sigma 0.0017. Pinned ' +
+               '2026-08-23 after gemma4:latest was uninstalled and 404d silently — the second ' +
+               'time this pin has died that way (llama3.1:latest, 2026-06-15).',
     },
   };
 }
