@@ -219,6 +219,23 @@ function json(res, data) {
 // HTTP server
 // ---------------------------------------------------------------------------
 
+// How often a process that lost the port race re-checks whether it is free.
+export const DASHBOARD_RETRY_MS = Number(process.env.DASHBOARD_RETRY_MS) || 30_000;
+
+// Serve the dashboard, taking the port over if whoever holds it goes away.
+//
+// Every MCP server process calls this, so on a machine with several sessions
+// open they race for the port and exactly one wins. Losing used to be terminal:
+// the error handler ignored EADDRINUSE and gave up for good, which tied the
+// dashboard's lifetime to whichever process happened to boot FIRST. When that
+// one exited the port fell free and no surviving process ever claimed it — the
+// dashboard was simply gone, with nothing logged in either direction. Observed
+// 2026-08-28: killing a 3-hour-old instance left two healthy servers running
+// and http://localhost:9980 answering nothing.
+//
+// So a loser now waits and retries instead of quitting. The retry timer is
+// unref'd, exactly like the server itself, so waiting for a port never keeps a
+// process alive that would otherwise exit.
 export function start(port = 9980, keepAlive = false) {
   const server = createServer((req, res) => {
     if (req.method === 'GET' || req.method === 'HEAD') {
@@ -230,16 +247,31 @@ export function start(port = 9980, keepAlive = false) {
     }
   });
 
+  let waiting = false; // report the contended port once, not every retry
+
   server.on('error', err => {
-    if (err.code !== 'EADDRINUSE')
+    if (err.code !== 'EADDRINUSE') {
       process.stderr.write('Dashboard error: ' + err.message + '\n');
+      return;
+    }
+    if (!waiting) {
+      process.stderr.write(
+        `Dashboard port ${port} is held by another instance — standing by to take it over\n`
+      );
+      waiting = true;
+    }
+    setTimeout(() => server.listen(port, '127.0.0.1'), DASHBOARD_RETRY_MS).unref();
   });
 
   server.listen(port, '127.0.0.1', () => {
+    waiting = false;
     process.stderr.write('MemoryCentral dashboard → http://localhost:' + port + '\n');
   });
 
+  // Set once, before any retry: net.Server remembers the unref across relistens.
   if (!keepAlive) server.unref();
+
+  return server;
 }
 
 function handleGet(req, res, port) {
