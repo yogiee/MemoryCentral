@@ -78,9 +78,36 @@ export function activeModel() {
   return EMBED_PROVIDER === 'local' ? LOCAL_MODEL : EMBED_MODEL;
 }
 
-// Abort budget for one embed call. Named (not inline) so a failure can quote it
-// and so the cold-start hypothesis is one env var away from being tested.
-export const EMBED_TIMEOUT_MS = Number(process.env.EMBED_TIMEOUT_MS) || 10_000;
+// Abort budget for one embed call. Raised 10s -> 30s on 2026-08-28 after the
+// cold-start hypothesis (defect 4 of the backlog-gaps report) was finally
+// measured rather than assumed. Worst observed case, repeated: an embed issued
+// while gemma4:e4b-mlx (8.5 GB, the EXTRACT_MODEL) is cold-loading — which is
+// exactly what a sync does, since refreshProjectMeta and the embed pass run in
+// the same run — takes 4.4-5.3s against the old 10s budget.
+//
+//   embedder warm, GPU idle                       50-205ms
+//   embedder cold, GPU idle                       ~1.2s
+//   embedder resident, big model cold-loading     ~370ms
+//   embedder cold,     big model cold-loading     4.4-5.3s   <- the budget case
+//
+// 1.9x headroom on an idle machine is thin by this project's own standard: the
+// same reasoning raised EXTRACT_TIMEOUT_MS off 30s, where 19% headroom let a
+// busy GPU look like a dead pin. 30s keeps ~6x. The cost of the larger budget is
+// bounded — embedMemory stops at its first failed chunk, and drainPending gives
+// up after 3 consecutive failures — and a genuinely absent provider still fails
+// instantly with ECONNREFUSED rather than waiting out the clock.
+export const EMBED_TIMEOUT_MS = Number(process.env.EMBED_TIMEOUT_MS) || 30_000;
+
+// How long Ollama keeps the embedder resident after a call. The measurements
+// above make this the higher-leverage half of the fix: keeping the model loaded
+// collapses the worst case from ~4.5s to ~370ms, a 12x cut, because the dominant
+// cost is the embedder's own cold load competing with the big model's, not the
+// GPU contention itself.
+//
+// Sent per request rather than via the server-wide OLLAMA_KEEP_ALIVE, which
+// would also pin the 8.5 GB extract model in memory. This one is 673 MB — cheap
+// to keep, and it is the model on the hot path.
+export const EMBED_KEEP_ALIVE = process.env.EMBED_KEEP_ALIVE ?? '30m';
 
 // Carries a machine-readable reason alongside the human message, so callers can
 // tell a missing model from a stopped service without parsing prose.
@@ -106,7 +133,7 @@ async function ollamaEmbed(text) {
     res = await fetch(`${OLLAMA_BASE}/api/embed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: EMBED_MODEL, input: text, truncate: true }),
+      body: JSON.stringify({ model: EMBED_MODEL, input: text, truncate: true, keep_alive: EMBED_KEEP_ALIVE }),
       signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
     });
   } catch (err) {
@@ -116,7 +143,7 @@ async function ollamaEmbed(text) {
     // service. Keep them apart.
     if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
       throw new EmbedError('timeout',
-        `no response in ${EMBED_TIMEOUT_MS}ms — ${EMBED_MODEL} may be cold-loading (raise EMBED_TIMEOUT_MS to test)`);
+        `no response in ${EMBED_TIMEOUT_MS}ms — ${EMBED_MODEL} may be cold-loading behind a larger model (raise EMBED_TIMEOUT_MS)`);
     }
     // The useful detail lives on err.cause (ECONNREFUSED, ENOTFOUND, a TLS
     // failure); err.message is a uniformly useless "fetch failed".
