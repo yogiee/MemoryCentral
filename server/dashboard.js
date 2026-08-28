@@ -99,12 +99,15 @@ function getOverview(db) {
     ORDER BY m.synced_at DESC LIMIT 8
   `).all();
 
-  // Configured embedding provider + how many memories still lack a
-  // current-model vector (saved while the provider was down).
+  // Configured embedding provider, plus how many memories lack current-model
+  // vectors for the text they now hold (newly saved, edited since their last
+  // embed, or written while the provider was down) and how many chunk vectors
+  // back the corpus — long memories are several vectors each, see chunk.js.
   const embedStatus = {
     provider: EMBED_PROVIDER,
     model: activeModel(),
     pending: countPending(db),
+    chunks: db.prepare('SELECT COUNT(*) AS n FROM embeddings').get().n,
   };
 
   // Aggregate byStack

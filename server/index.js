@@ -7,8 +7,9 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
 import { openDb } from './db.js';
-import { embed, cosineSimilarity, EMBED_PROVIDER } from './embed.js';
-import { drainPending, countPending } from './backlog.js';
+import { embed, cosineSimilarity, activeModel } from './embed.js';
+import { drainPending, countPending, embedMemory } from './backlog.js';
+import { embedHash } from './chunk.js';
 import { memoryType, extractTitle } from './meta.js';
 import { start as startDashboard } from './dashboard.js';
 import { writeManifest } from './manifest.js';
@@ -178,8 +179,8 @@ server.tool(
   async ({ description, limit = 5 }) => {
     const embedResult = await embed(description);
 
-    // Degraded mode: provider down — return all content for in-context matching
-    if (!embedResult) {
+    // Degraded mode: no query vector — return all content for in-context matching
+    if (!embedResult.ok) {
       const all = db.prepare(`
         SELECT m.title, m.filename, m.content, m.memory_type, p.name AS project_name
         FROM memories m JOIN projects p ON p.id = m.project_id
@@ -187,7 +188,7 @@ server.tool(
       `).all();
       if (!all.length) return { content: [{ type: 'text', text: 'No memories found — run sync first.' }] };
       const text = [
-        `⚠ Semantic search degraded — embedding provider "${EMBED_PROVIDER}" is unavailable. ` +
+        `⚠ Semantic search degraded — could not embed the query (${embedResult.reason}: ${embedResult.message}). ` +
         `Review the ${all.length} memories below and identify which best match: "${description}"`,
         '',
         ...all.map(r => `**${r.project_name}/${r.filename}** [${r.memory_type}]\n_${r.title}_\n${r.content.slice(0, 300)}${r.content.length > 300 ? '…' : ''}`),
@@ -197,7 +198,8 @@ server.tool(
 
     const { vector: queryVec, model } = embedResult;
     const rows = db.prepare(`
-      SELECT e.memory_id, e.vector, m.title, m.filename, m.content, m.memory_type, p.name AS project_name
+      SELECT e.memory_id, e.vector, e.chunk_index, e.start_char, e.end_char,
+             m.title, m.filename, m.content, m.memory_type, p.name AS project_name
       FROM embeddings e
       JOIN memories m ON m.id = e.memory_id
       JOIN projects p ON p.id = m.project_id
@@ -206,22 +208,41 @@ server.tool(
 
     if (!rows.length) return { content: [{ type: 'text', text: 'No embeddings found — run sync first.' }] };
 
-    const scored = rows
-      .map(r => ({ ...r, score: cosineSimilarity(queryVec, JSON.parse(r.vector)) }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
+    // A long memory is several chunk vectors (see chunk.js). Score them all, then
+    // keep each memory's best-matching chunk — without the collapse, one 39 KB
+    // memory would fill the result list with fourteen of its own sections.
+    const best = new Map();
+    const chunkCount = new Map();
+    for (const r of rows) {
+      chunkCount.set(r.memory_id, (chunkCount.get(r.memory_id) || 0) + 1);
+      const score = cosineSimilarity(queryVec, JSON.parse(r.vector));
+      const held = best.get(r.memory_id);
+      if (!held || score > held.score) best.set(r.memory_id, { ...r, score });
+    }
 
-    const text = scored.map(r => [
-      `**${r.project_name}/${r.filename}** [${r.memory_type}] — score: ${r.score.toFixed(3)}`,
-      `_${r.title}_`,
-      r.content.slice(0, 400) + (r.content.length > 400 ? '…' : ''),
-    ].join('\n')).join('\n\n---\n\n');
+    const scored = [...best.values()].sort((a, b) => b.score - a.score).slice(0, limit);
 
-    // Memories saved during a provider outage have no current-model vector yet
-    // and are invisible here until the backlog drains — say so.
+    const text = scored.map(r => {
+      // Quote the passage that actually matched, not the head of the document —
+      // for a long memory those are rarely the same place.
+      const total  = chunkCount.get(r.memory_id);
+      const body   = r.content.slice(r.start_char, r.end_char);
+      const where  = total > 1 ? ` (chunk ${r.chunk_index + 1}/${total})` : '';
+      const excerpt = (r.start_char > 0 ? '…' : '') + body.slice(0, 400) + (body.length > 400 ? '…' : '');
+      return [
+        `**${r.project_name}/${r.filename}** [${r.memory_type}] — score: ${r.score.toFixed(3)}${where}`,
+        `_${r.title}_`,
+        excerpt,
+      ].join('\n');
+    }).join('\n\n---\n\n');
+
+    // A memory is missing here if it has no current-model vector at all (saved
+    // during a provider outage), and misranked if its vectors predate its current
+    // text. Both states are what countPending measures now — say so either way.
     const pending = countPending(db);
     const pendingNote = pending
-      ? `\n\n_⚠ ${pending} memorie(s) pending embedding are excluded from these results (still findable via search_memories)._`
+      ? `\n\n_⚠ ${pending} memorie(s) have no current vector for the text they now hold — they are missing from these results, ` +
+        `or matched on superseded content. Keyword search (search_memories) is unaffected._`
       : '';
 
     return { content: [{ type: 'text', text: `# Similar to "${description}" (via ${model})\n\n${text}${pendingNote}` }] };
@@ -251,37 +272,44 @@ server.tool(
 
     const type     = memoryType(filename, content);
     const title    = extractTitle(content, filename);
+    const hash     = embedHash(title, content);
     const now      = new Date().toISOString();
     const existing = db.prepare('SELECT id, content FROM memories WHERE project_id=? AND filename=?').get(p.id, filename);
 
-    let memId;
+    let memId, action;
     if (!existing) {
       const { id } = db.prepare(
-        'INSERT INTO memories (project_id, filename, memory_type, title, content, synced_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id'
-      ).get(p.id, filename, type, title, content, now);
+        'INSERT INTO memories (project_id, filename, memory_type, title, content, embed_hash, synced_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id'
+      ).get(p.id, filename, type, title, content, hash, now);
       db.prepare('INSERT INTO memories_fts (rowid, title, content, project_name, memory_type) VALUES (?, ?, ?, ?, ?)').run(id, title, content, project, type);
-      memId = id;
+      memId = id; action = 'Created';
     } else if (existing.content !== content) {
-      db.prepare('UPDATE memories SET memory_type=?, title=?, content=?, synced_at=? WHERE id=?').run(type, title, content, now, existing.id);
+      db.prepare('UPDATE memories SET memory_type=?, title=?, content=?, embed_hash=?, synced_at=? WHERE id=?').run(type, title, content, hash, now, existing.id);
       db.prepare('DELETE FROM memories_fts WHERE rowid=?').run(existing.id);
       db.prepare('INSERT INTO memories_fts (rowid, title, content, project_name, memory_type) VALUES (?, ?, ?, ?, ?)').run(existing.id, title, content, project, type);
-      memId = existing.id;
+      memId = existing.id; action = 'Updated';
     } else {
-      return { content: [{ type: 'text', text: `"${filename}" in ${project} is already up-to-date.` }] };
+      // Byte-identical content. Re-saving is the obvious retry after a save that
+      // reported "embedding pending", so check the vectors before short-circuiting
+      // — the old early return made that retry impossible and a memory could sit
+      // unembedded indefinitely (found 2026-08-28).
+      const current = db.prepare('SELECT COUNT(*) AS n FROM embeddings WHERE memory_id=? AND model=? AND embed_hash=?')
+        .get(existing.id, activeModel(), hash).n;
+      if (current) {
+        return { content: [{ type: 'text', text: `"${filename}" in ${project} is already up-to-date.` }] };
+      }
+      memId = existing.id; action = 'Re-embedded';
     }
 
-    const embedResult = await embed(`${title}\n\n${content}`); // embed() applies EMBED_MAX_CHARS
-    if (embedResult) {
-      db.prepare(`
-        INSERT INTO embeddings (memory_id, vector, model, generated_at) VALUES (?, ?, ?, ?)
-        ON CONFLICT(memory_id) DO UPDATE SET vector=excluded.vector, model=excluded.model, generated_at=excluded.generated_at
-      `).run(memId, JSON.stringify(embedResult.vector), embedResult.model, now);
-    }
+    const embedded = await embedMemory(db, { id: memId, title, content, embed_hash: hash });
 
-    const action = existing ? 'Updated' : 'Created';
-    const embedNote = embedResult
+    // Name the actual failure. This message used to read "provider unavailable"
+    // for every cause, and said exactly that while Ollama was healthy — which is
+    // why nobody chased it and 14 memories drifted (2026-08-28).
+    const embedNote = embedded.ok
       ? ''
-      : `\n⚠ Embedding pending — provider "${EMBED_PROVIDER}" unavailable. Keyword search works now; semantic search picks it up after auto-backfill.`;
+      : `\n⚠ Embedding pending — ${embedded.reason}: ${embedded.message}\n` +
+        `  Keyword search works now; semantic search picks it up after auto-backfill (or save again to retry).`;
     return { content: [{ type: 'text', text: `${action} "${filename}" in ${project}.\nWritten to: ${join(memDir, filename)}${embedNote}` }] };
   },
 );
@@ -363,9 +391,9 @@ startDashboard(9980);
 writeManifest();
 
 // Backfill embeddings left pending by provider outages (best-effort, non-blocking).
-drainPending(db).then(({ drained, remaining }) => {
+drainPending(db).then(({ drained, remaining, reason, message }) => {
   if (drained)   console.error(`memoryCentral: backfilled ${drained} pending embedding(s)`);
-  if (remaining) console.error(`memoryCentral: ${remaining} embedding(s) still pending — provider "${EMBED_PROVIDER}" down?`);
+  if (remaining) console.error(`memoryCentral: ${remaining} memorie(s) still pending — ${reason}: ${message}`);
 }).catch(() => {});
 
 console.error('MemoryCentral MCP server v2 running');

@@ -4,8 +4,9 @@ import { fileURLToPath } from 'url';
 import { homedir } from 'os';
 import { createHash } from 'crypto';
 import { openDb } from './db.js';
-import { embed, extractProjectMeta, EMBED_PROVIDER } from './embed.js';
-import { drainPending, countPending } from './backlog.js';
+import { extractProjectMeta, EMBED_PROVIDER } from './embed.js';
+import { drainPending, countPending, embedMemory } from './backlog.js';
+import { embedHash } from './chunk.js';
 import { memoryType, extractTitle } from './meta.js';
 import { resolveProject } from './paths.js';
 
@@ -148,19 +149,15 @@ async function main() {
     `),
     updateMeta:  db.prepare(`UPDATE projects SET description=?, stack=?, meta_hash=? WHERE id=?`),
     updateStack: db.prepare(`UPDATE projects SET stack=? WHERE id=?`),
-    getMemory:   db.prepare(`SELECT id, content, memory_type, title FROM memories WHERE project_id=? AND filename=?`),
-    updateMemMeta: db.prepare(`UPDATE memories SET memory_type=?, title=? WHERE id=?`),
+    getMemory:   db.prepare(`SELECT id, content, memory_type, title, embed_hash FROM memories WHERE project_id=? AND filename=?`),
+    updateMemMeta: db.prepare(`UPDATE memories SET memory_type=?, title=?, embed_hash=? WHERE id=?`),
     insertMem:  db.prepare(`
-      INSERT INTO memories (project_id, filename, memory_type, title, content, synced_at)
-      VALUES (?, ?, ?, ?, ?, ?) RETURNING id
+      INSERT INTO memories (project_id, filename, memory_type, title, content, embed_hash, synced_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
     `),
-    updateMem:  db.prepare(`UPDATE memories SET memory_type=?, title=?, content=?, synced_at=? WHERE id=?`),
+    updateMem:  db.prepare(`UPDATE memories SET memory_type=?, title=?, content=?, embed_hash=?, synced_at=? WHERE id=?`),
     insertFts:  db.prepare(`INSERT INTO memories_fts (rowid, title, content, project_name, memory_type) VALUES (?, ?, ?, ?, ?)`),
     deleteFts:  db.prepare(`DELETE FROM memories_fts WHERE rowid=?`),
-    upsertEmbed: db.prepare(`
-      INSERT INTO embeddings (memory_id, vector, model, generated_at) VALUES (?, ?, ?, ?)
-      ON CONFLICT(memory_id) DO UPDATE SET vector=excluded.vector, model=excluded.model, generated_at=excluded.generated_at
-    `),
   };
 
   // Helper: ingest all .md files from a directory into a project
@@ -175,23 +172,31 @@ async function main() {
       if (filename === 'MEMORY.md') continue;
       const type     = memoryType(filename, content);
       const title    = extractTitle(content, filename);
+      const hash     = embedHash(title, content);
       const existing = stmts.getMemory.get(projectId, filename);
       if (!existing) {
-        const { id } = stmts.insertMem.get(projectId, filename, type, title, content, now);
+        const { id } = stmts.insertMem.get(projectId, filename, type, title, content, hash, now);
         stmts.insertFts.run(id, title, content, projectName, type);
-        toEmbed.push({ id, text: `${title}\n\n${content}` });
+        toEmbed.push({ id, title, content, embed_hash: hash });
         stats.added++; added++;
       } else if (existing.content !== content) {
-        stmts.updateMem.run(type, title, content, now, existing.id);
+        stmts.updateMem.run(type, title, content, hash, now, existing.id);
         stmts.deleteFts.run(existing.id);
         stmts.insertFts.run(existing.id, title, content, projectName, type);
-        toEmbed.push({ id: existing.id, text: `${title}\n\n${content}` });
+        toEmbed.push({ id: existing.id, title, content, embed_hash: hash });
         stats.updated++; updated++;
       } else {
         // Content unchanged — but reclassify if the type/title rules evolved
-        // (e.g. frontmatter-type support added 2026-07-10).
-        if (existing.memory_type !== type || existing.title !== title) {
-          stmts.updateMemMeta.run(type, title, existing.id);
+        // (e.g. frontmatter-type support added 2026-07-10). The title is part of
+        // every chunk's embed text, so a retitle invalidates the vectors too;
+        // writing the new hash is what puts the memory back in the backlog.
+        //
+        // The hash comparison also repairs a row whose stored hash disagrees with
+        // its own content — nothing should produce that, but if anything does,
+        // the memory would otherwise be permanently misdescribed to the backlog
+        // and never noticed, which is the class of bug this whole area just had.
+        if (existing.memory_type !== type || existing.title !== title || existing.embed_hash !== hash) {
+          stmts.updateMemMeta.run(type, title, hash, existing.id);
         }
         stats.unchanged++;
       }
@@ -298,17 +303,12 @@ async function main() {
   // the memory is already in DB + FTS; the vector stays pending and is backfilled
   // by the drain below (or a later run) once the provider is back.
   if (toEmbed.length) {
-    process.stderr.write(`\nGenerating ${toEmbed.length} embedding(s)...\n`);
+    process.stderr.write(`\nEmbedding ${toEmbed.length} memorie(s)...\n`);
     let consecutiveFailures = 0;
-    for (const { id, text } of toEmbed) {
+    for (const mem of toEmbed) {
       if (consecutiveFailures >= 3) break; // provider down — stop hammering, leave the rest pending
-      const result = await embed(text); // embed() applies EMBED_MAX_CHARS
-      if (result) {
-        stmts.upsertEmbed.run(id, JSON.stringify(result.vector), result.model, now);
-        consecutiveFailures = 0;
-      } else {
-        consecutiveFailures++;
-      }
+      // embedMemory chunks long content and writes all its vectors or none.
+      consecutiveFailures = (await embedMemory(db, mem)).ok ? 0 : consecutiveFailures + 1;
     }
   }
 
@@ -338,9 +338,13 @@ async function main() {
     );
   }
   if (pending) {
+    // Say which failure, not just that there was one. `backlog.reason` is set
+    // whenever the drain left anything behind; without it this line claimed the
+    // provider was unavailable no matter what actually went wrong.
+    const cause = backlog.reason ? `${backlog.reason}: ${backlog.message}` : `provider "${EMBED_PROVIDER}" unavailable`;
     process.stdout.write(
-      `⚠  ${pending} memorie(s) pending embedding — provider "${EMBED_PROVIDER}" unavailable. ` +
-      `Keyword search is unaffected; vectors backfill automatically on the next sync/boot with the provider up.\n`
+      `⚠  ${pending} memorie(s) pending embedding — ${cause}\n` +
+      `   Keyword search is unaffected; vectors backfill automatically on the next sync/boot once that is resolved.\n`
     );
   }
 }

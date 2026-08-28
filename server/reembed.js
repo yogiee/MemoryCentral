@@ -13,17 +13,17 @@
 
 import { openDb } from './db.js';
 import { embed } from './embed.js';
+import { embedMemory } from './backlog.js';
 import { writeManifest } from './manifest.js';
 
 const staleOnly = process.argv.includes('--stale');
-const now = new Date().toISOString();
 
 const db = openDb();
 
 // Probe the active provider/model on one row so we know what we're migrating to.
 const probe = await embed('embedding model probe');
-if (!probe) {
-  process.stderr.write('No embedding provider available (Ollama down, no fallback). Aborting — nothing changed.\n');
+if (!probe.ok) {
+  process.stderr.write(`Cannot embed (${probe.reason}): ${probe.message}\nAborting — nothing changed.\n`);
   db.close();
   process.exit(1);
 }
@@ -31,40 +31,42 @@ const targetModel = probe.model;
 const targetDim = probe.vector.length;
 process.stdout.write(`Target model: ${targetModel} (${targetDim}-dim)\n`);
 
+// One row per memory even though embeddings now holds one row per chunk —
+// MIN(model) collapses a memory's chunks and, on the mixed-model table this
+// script exists to repair, reports the stale model rather than hiding it.
 const rows = db.prepare(`
-  SELECT m.id, m.title, m.content, p.name AS project_name, e.model AS current_model
+  SELECT m.id, m.title, m.content, m.embed_hash, p.name AS project_name,
+         MIN(e.model) AS current_model
   FROM memories m
   JOIN projects p ON p.id = m.project_id
   LEFT JOIN embeddings e ON e.memory_id = m.id
+  GROUP BY m.id
   ORDER BY m.id
 `).all();
 
 const targets = staleOnly ? rows.filter(r => r.current_model !== targetModel) : rows;
 process.stdout.write(`Re-embedding ${targets.length} of ${rows.length} memories${staleOnly ? ' (stale only)' : ''}...\n`);
 
-const upsert = db.prepare(`
-  INSERT INTO embeddings (memory_id, vector, model, generated_at) VALUES (?, ?, ?, ?)
-  ON CONFLICT(memory_id) DO UPDATE SET vector=excluded.vector, model=excluded.model, generated_at=excluded.generated_at
-`);
-
-let done = 0, failed = 0;
+let done = 0, failed = 0, chunks = 0;
 for (const r of targets) {
-  const text = `${r.title}\n\n${r.content}`; // embed() applies EMBED_MAX_CHARS
-  const result = await embed(text);
-  if (!result) { failed++; continue; }
+  const result = await embedMemory(db, r); // chunks long memories, all-or-nothing
+  if (!result.ok) {
+    failed++;
+    if (failed === 1) process.stderr.write(`  first failure (${result.reason}): ${result.message}\n`);
+    continue;
+  }
   if (result.model !== targetModel) {
     // Provider changed mid-run (e.g. Ollama dropped to the transformers fallback).
     // Stop rather than write a mixed-model table.
     process.stderr.write(`\nProvider changed mid-run (${result.model} != ${targetModel}). Stopping at ${done} to keep the table homogeneous.\n`);
     break;
   }
-  upsert.run(r.id, JSON.stringify(result.vector), result.model, now);
-  done++;
+  done++; chunks += result.chunks;
   if (done % 25 === 0) process.stdout.write(`  ${done}/${targets.length}\n`);
 }
 
 // Report any remaining model heterogeneity so the operator knows the state.
-const breakdown = db.prepare('SELECT model, COUNT(*) AS n FROM embeddings GROUP BY model ORDER BY n DESC').all();
+const breakdown = db.prepare('SELECT model, COUNT(DISTINCT memory_id) AS n FROM embeddings GROUP BY model ORDER BY n DESC').all();
 db.close();
 
 // A re-embed is the moment the active embedding assignment changes — refresh the
@@ -72,7 +74,7 @@ db.close();
 const manifestPath = writeManifest();
 if (manifestPath) process.stdout.write(`Consumer manifest updated: ${manifestPath}\n`);
 
-process.stdout.write(`\nDone: ${done} re-embedded, ${failed} failed.\n`);
+process.stdout.write(`\nDone: ${done} memorie(s) re-embedded as ${chunks} chunk(s), ${failed} failed.\n`);
 process.stdout.write('Embeddings table now:\n');
 for (const b of breakdown) process.stdout.write(`  ${b.model}: ${b.n}\n`);
 if (breakdown.length > 1) {
