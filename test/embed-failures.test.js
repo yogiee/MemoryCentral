@@ -110,3 +110,25 @@ test('a failure never looks like a success, and always carries both fields', asy
     assert.ok(r.reason && r.message, 'reason and message must both be set');
   }
 });
+
+// --- Cold-start budget (defect 4, measured 2026-08-28) ----------------------
+// The failure this guards: an embed issued while the 8.5 GB EXTRACT_MODEL is
+// cold-loading measured 4.4-5.3s against the old 10s budget. Keeping the
+// embedder resident cuts that to ~370ms, and the wider budget covers the rest.
+test('the embedder is asked to stay resident, so cold loads are rare', async () => {
+  let sent;
+  globalThis.fetch = async (_url, init) => {
+    sent = JSON.parse(init.body);
+    return Response.json({ embeddings: [[0.1]] });
+  };
+  await embed('hello');
+  assert.ok(sent.keep_alive, 'a keep_alive must be sent, or the model unloads after ~5min');
+  // Must outlast a sync's metadata pass, which is what evicts it in the first place.
+  assert.match(String(sent.keep_alive), /^(\d+m|\d+h|\d{3,})$/);
+});
+
+test('the abort budget leaves real headroom over the measured worst case', () => {
+  // Worst observed: 5.3s. Anything under ~15s repeats the 1.9x margin that made
+  // a busy GPU indistinguishable from a dead provider.
+  assert.ok(EMBED_TIMEOUT_MS >= 15_000, `budget ${EMBED_TIMEOUT_MS}ms is too thin`);
+});
