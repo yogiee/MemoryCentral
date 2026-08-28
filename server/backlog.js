@@ -114,3 +114,62 @@ export async function drainPending(db, log = () => {}) {
     ? { drained, remaining, reason: lastFailure.reason, message: lastFailure.message }
     : { drained, remaining };
 }
+
+// How often the resident backfill loop re-checks. Cheap enough to be frequent:
+// an empty backlog costs one indexed COUNT and never touches the provider, and a
+// down provider costs one failed probe, because drainPending() probes before it
+// reads a single row.
+export const BACKFILL_INTERVAL_MS = Number(process.env.BACKFILL_INTERVAL_MS) || 60_000;
+
+const unrefSleep = ms => new Promise(resolve => {
+  const timer = setTimeout(resolve, ms);
+  timer.unref?.(); // never hold the process open on our account
+});
+
+// Keep retrying the backlog for the life of the process. Returns a stop function.
+//
+// Defect 2 of the 2026-08-28 report was that a `/mcp` reconnect "didn't drain the
+// backlog". The drain was never broken — it simply only ever got one attempt, at
+// the instant of boot. The provider is routinely not ready right then (Ollama
+// still starting, or the model cold), and reconnecting the server is itself just
+// another boot, so the user's natural remedy lands in exactly the same window and
+// appears to do nothing. Reproduced 2026-08-28: booting against a down provider
+// left 3 memories pending, and bringing the provider back up changed nothing
+// until the next sync.
+//
+// The old call site was also `.catch(() => {})`, so a genuine exception here was
+// indistinguishable from "nothing to do" — the same swallowing that made the
+// original outage unreadable. Failures are reported now, never discarded.
+export function startBackfillLoop(db, log = () => {}, opts = {}) {
+  const {
+    intervalMs = BACKFILL_INTERVAL_MS,
+    count = countPending,
+    drain = drainPending,
+    sleep = unrefSleep,
+  } = opts;
+
+  let stopped = false;
+  let lastReason = null; // so a persistently down provider is reported once, not every minute
+
+  (async () => {
+    while (!stopped) {
+      try {
+        if (count(db)) {
+          const { drained, remaining, reason, message } = await drain(db);
+          if (drained) log(`backfilled ${drained} pending embedding(s)`);
+          if (remaining) {
+            if (reason !== lastReason) log(`${remaining} memorie(s) still pending — ${reason}: ${message}`);
+            lastReason = reason;
+          } else {
+            lastReason = null;
+          }
+        }
+      } catch (err) {
+        log(`backfill attempt failed — ${err?.stack || err?.message || err}`);
+      }
+      await sleep(intervalMs);
+    }
+  })();
+
+  return () => { stopped = true; };
+}

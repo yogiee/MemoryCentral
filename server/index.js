@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 import { homedir } from 'os';
 import { openDb } from './db.js';
 import { embed, cosineSimilarity, activeModel } from './embed.js';
-import { drainPending, countPending, embedMemory } from './backlog.js';
+import { countPending, embedMemory, startBackfillLoop } from './backlog.js';
 import { embedHash } from './chunk.js';
 import { memoryType, extractTitle } from './meta.js';
 import { start as startDashboard } from './dashboard.js';
@@ -390,10 +390,9 @@ startDashboard(9980);
 // best-effort). See server/manifest.js + docs/consumer-manifest.md.
 writeManifest();
 
-// Backfill embeddings left pending by provider outages (best-effort, non-blocking).
-drainPending(db).then(({ drained, remaining, reason, message }) => {
-  if (drained)   console.error(`memoryCentral: backfilled ${drained} pending embedding(s)`);
-  if (remaining) console.error(`memoryCentral: ${remaining} memorie(s) still pending — ${reason}: ${message}`);
-}).catch(() => {});
+// Backfill embeddings left pending by provider outages. Runs for the life of the
+// process rather than once at boot: the provider is often not ready at launch,
+// and a reconnect is just another boot into the same window (defect 2, 2026-08-28).
+startBackfillLoop(db, msg => console.error(`memoryCentral: ${msg}`));
 
 console.error('MemoryCentral MCP server v2 running');
