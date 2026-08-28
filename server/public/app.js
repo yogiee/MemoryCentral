@@ -408,7 +408,7 @@ function renderOverview(data) {
   [
     [providerName + ' · ' + emb.model, 'active', true],
     emb.pending > 0
-      ? ['Pending backfill — provider down?', '' + emb.pending, false]
+      ? ['Awaiting vectors — new, edited, or provider down', '' + emb.pending, false]
       : ['Backlog clear', 'ok', true],
   ].forEach(function(row) {
     var rowEl = el('div', { 'class': 'tier-row ' + (row[2] ? 'active' : 'inactive') });

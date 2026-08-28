@@ -47,7 +47,7 @@ export const STACK_TAGS = [
 // Max input chars per embed. Raised 2000→6000 with the emb-gemma switch — sits inside
 // emb-gemma's clean ~8k-char (2048-tok) window, capturing long-memory body content that
 // the old 2000 cap truncated away. Centralized here so all callers stay consistent.
-const EMBED_MAX_CHARS = Number(process.env.EMBED_MAX_CHARS) || 6000;
+export const EMBED_MAX_CHARS = Number(process.env.EMBED_MAX_CHARS) || 6000;
 
 // Model used by the "local" provider (@huggingface/transformers, no service required).
 const LOCAL_MODEL = 'all-MiniLM-L6-v2';
@@ -78,6 +78,20 @@ export function activeModel() {
   return EMBED_PROVIDER === 'local' ? LOCAL_MODEL : EMBED_MODEL;
 }
 
+// Abort budget for one embed call. Named (not inline) so a failure can quote it
+// and so the cold-start hypothesis is one env var away from being tested.
+export const EMBED_TIMEOUT_MS = Number(process.env.EMBED_TIMEOUT_MS) || 10_000;
+
+// Carries a machine-readable reason alongside the human message, so callers can
+// tell a missing model from a stopped service without parsing prose.
+class EmbedError extends Error {
+  constructor(reason, message) {
+    super(message);
+    this.name = 'EmbedError';
+    this.reason = reason;
+  }
+}
+
 // ── Tier 1: Ollama ──────────────────────────────────────────────────────────
 
 // Uses the modern /api/embed endpoint with truncate:true — the legacy
@@ -87,14 +101,44 @@ export function activeModel() {
 // 6000 chars of code/URLs can exceed emb-gemma's 2048-token window even though
 // typical prose fits. /api/embed truncates to the context window server-side.
 async function ollamaEmbed(text) {
-  const res = await fetch(`${OLLAMA_BASE}/api/embed`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: EMBED_MODEL, input: text, truncate: true }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!res.ok) throw new Error(`Ollama embed: ${res.status}`);
-  const { embeddings } = await res.json();
+  let res;
+  try {
+    res = await fetch(`${OLLAMA_BASE}/api/embed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: EMBED_MODEL, input: text, truncate: true }),
+      signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
+    });
+  } catch (err) {
+    // fetch rejects both when nothing is listening and when the abort fires.
+    // Those are opposite problems — "start Ollama" vs "Ollama is thinking too
+    // long" — and collapsing them is how a cold-load stall reads as a dead
+    // service. Keep them apart.
+    if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+      throw new EmbedError('timeout',
+        `no response in ${EMBED_TIMEOUT_MS}ms — ${EMBED_MODEL} may be cold-loading (raise EMBED_TIMEOUT_MS to test)`);
+    }
+    // The useful detail lives on err.cause (ECONNREFUSED, ENOTFOUND, a TLS
+    // failure); err.message is a uniformly useless "fetch failed".
+    const detail = err?.cause?.code || err?.cause?.message || err?.message || 'unknown';
+    throw new EmbedError('provider_down', `cannot reach Ollama at ${OLLAMA_BASE} (${detail})`);
+  }
+
+  if (!res.ok) {
+    // A pulled-out model 404s here. That exact failure has now killed two
+    // EXTRACT_MODEL pins silently (llama3.1, gemma4:latest) and was read both
+    // times as "Ollama isn't running" — name the tag and the fix instead.
+    if (res.status === 404) {
+      throw new EmbedError('model_missing', `${EMBED_MODEL} is not installed — ollama pull ${EMBED_MODEL}`);
+    }
+    const body = await res.text().then(t => t.slice(0, 200).trim()).catch(() => '');
+    throw new EmbedError('http_error', `Ollama returned HTTP ${res.status} for ${EMBED_MODEL}${body ? ` — ${body}` : ''}`);
+  }
+
+  const { embeddings } = await res.json().catch(() => ({}));
+  if (!embeddings?.[0]?.length) {
+    throw new EmbedError('bad_response', `Ollama returned no vector for ${EMBED_MODEL}`);
+  }
   return { vector: embeddings[0], model: EMBED_MODEL };
 }
 
@@ -104,9 +148,15 @@ let _pipe = null;
 
 async function localEmbed(text) {
   if (!_pipe) {
-    const { pipeline } = await import('@huggingface/transformers');
-    process.stderr.write('  Loading local embedding model (first run downloads ~25 MB)...\n');
-    _pipe = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { quantized: true });
+    try {
+      const { pipeline } = await import('@huggingface/transformers');
+      process.stderr.write('  Loading local embedding model (first run downloads ~25 MB)...\n');
+      _pipe = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { quantized: true });
+    } catch (err) {
+      // Usually a failed first-run download, which no amount of retrying fixes
+      // and which has nothing to do with a provider being "down".
+      throw new EmbedError('local_load_failed', `could not load ${LOCAL_MODEL}: ${err?.message || err}`);
+    }
   }
   const out = await _pipe(text, { pooling: 'mean', normalize: true });
   return { vector: Array.from(out.data), model: LOCAL_MODEL };
@@ -114,15 +164,33 @@ async function localEmbed(text) {
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
-// Returns { vector: number[], model: string } or null (configured provider down).
-// Callers must handle null gracefully — the memory stays pending, never embedded
-// with a different model.
+// Returns { ok: true, vector, model } or { ok: false, reason, message }.
+// Callers must handle failure gracefully — the memory stays pending, never
+// embedded with a different model.
+//
+// Every failure used to collapse into a bare `null` and a caller-side string
+// reading `provider "ollama" unavailable`. On 2026-08-28 that string was printed
+// while Ollama was demonstrably healthy, and because it named no cause it was
+// believed: 14 memories' vectors went stale behind it before anyone looked.
+// A failure now always says which of these it was, and always says it out loud:
+//
+//   provider_down     nothing listening at OLLAMA_BASE
+//   timeout           no response within EMBED_TIMEOUT_MS (cold load?)
+//   model_missing     404 — the pinned tag is not installed
+//   http_error        any other non-2xx, with the response body
+//   bad_response      2xx with no usable vector
+//   local_load_failed transformers.js could not load the model
+//   unexpected        anything not anticipated here — still reported, never eaten
 export async function embed(text) {
   const input = String(text).slice(0, EMBED_MAX_CHARS);
   try {
-    return EMBED_PROVIDER === 'local' ? await localEmbed(input) : await ollamaEmbed(input);
-  } catch {
-    return null;
+    const { vector, model } = EMBED_PROVIDER === 'local' ? await localEmbed(input) : await ollamaEmbed(input);
+    return { ok: true, vector, model };
+  } catch (err) {
+    const reason  = err instanceof EmbedError ? err.reason : 'unexpected';
+    const message = err?.message || String(err);
+    process.stderr.write(`embed [${reason}]: ${message}\n`);
+    return { ok: false, reason, message };
   }
 }
 
