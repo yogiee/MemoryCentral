@@ -31,8 +31,9 @@ A meta-project that aggregates, tracks, and surfaces memory snapshots, progress,
 
 ### Local AI layer (Ollama)
 - `embeddinggemma:300m` — vector embeddings for semantic search (Tier 1, recommended; 768-dim, clean to ~8k chars). Switched from `nomic-embed-text` 2026-06-13 — see `docs/embedding-eval-2026-06-13.md`
-- `llama3.1` — auto-extracts project descriptions and stack tags during sync
-- Falls back to `@huggingface/transformers` (Tier 2) or in-context Claude matching (Tier 3) if Ollama is unavailable
+- `gemma4:e4b-mlx` — auto-extracts project descriptions and stack tags during sync (`EXTRACT_MODEL`, 60s abort budget; pinned 2026-08-23, replacing `gemma4:latest` → which replaced `llama3.1`)
+- Both pins are published to BenchLLAMA via the consumer manifest (`server/manifest.js` → `~/.config/ollama-consumers/memoryCentral.json`)
+- The embedding provider is a setup-time choice (`embedProvider` in `~/.memorycentralrc.json`: `ollama` default, or `local` = `@huggingface/transformers` `all-MiniLM-L6-v2`, Tier 2) — never a runtime fallback. If the provider is down, `find_similar` degrades to in-context Claude matching (Tier 3) and new memories stay pending until the backlog retry embeds them
 
 ### MCP server
 - Node.js server (`server/index.js`) registered globally via `claude mcp add --scope user`

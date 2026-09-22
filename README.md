@@ -203,9 +203,9 @@ Highest quality embeddings, runs entirely offline, zero API cost. embeddinggemma
 
 Defaults to `http://localhost:11434` when not set.
 
-### Tier 2 — transformers.js (no setup required)
+### Tier 2 — transformers.js (no Ollama required)
 
-If Ollama isn't available, MemoryCentral falls back to [`@huggingface/transformers`](https://huggingface.co/docs/transformers.js) running `all-MiniLM-L6-v2` directly in Node.js.
+On a machine without Ollama, set `"embedProvider": "local"` in `~/.memorycentralrc.json` (or `EMBED_PROVIDER=local`) and MemoryCentral embeds with [`@huggingface/transformers`](https://huggingface.co/docs/transformers.js) running `all-MiniLM-L6-v2` directly in Node.js. This is a setup-time choice, not an automatic fallback — mixing vector spaces mid-run would make rows invisible to search.
 
 - No service to run — model loads inside the Node process
 - First use downloads ~25 MB and caches locally (one time only)
@@ -214,18 +214,18 @@ If Ollama isn't available, MemoryCentral falls back to [`@huggingface/transforme
 
 ### Tier 3 — In-context Claude matching (always works)
 
-If neither Tier 1 nor Tier 2 is available, `find_similar` returns all memory content for Claude to match using its own understanding. Uses more context window but requires zero setup.
+If the configured provider is unavailable, `find_similar` returns all memory content for Claude to match using its own understanding. Uses more context window but requires zero setup.
 
 ### Project metadata extraction
 
-When Ollama is running, sync also uses `llama3.1` to auto-extract human-readable descriptions and stack tags for each project. Without Ollama, descriptions show as `_unknown_` — but all memory content is still fully indexed and searchable.
+When Ollama is running, sync also uses `gemma4:e4b-mlx` (override with `EXTRACT_MODEL`) to auto-extract human-readable descriptions and stack tags for each project. Without Ollama, descriptions show as `_unknown_` — but all memory content is still fully indexed and searchable.
 
 ### Capability summary
 
 | Feature | No Ollama | With Ollama |
 |---------|-----------|-------------|
 | `search_memories` (keyword) | ✓ Full | ✓ Full |
-| `find_similar` (semantic) | ✓ Via transformers.js or Claude | ✓ Best quality |
+| `find_similar` (semantic) | ✓ Via transformers.js (`embedProvider: local`) or Claude | ✓ Best quality |
 | Project descriptions + stack tags | ✗ Empty | ✓ Auto-extracted |
 | Dashboard embeddings tier | Tier 2 / 3 shown | Tier 1 shown |
 
@@ -265,6 +265,6 @@ Personal data (memories, snapshots, database) lives locally and never leaves you
 
 - **Node.js 22+** — `node:sqlite` built-in (zero native deps for core)
 - **SQLite** — WAL mode, FTS5 full-text search, vector embeddings as JSON
-- **@huggingface/transformers** — local embedding fallback (Tier 2), ~25 MB model download on first use
-- **Ollama** _(optional)_ — `embeddinggemma:300m` embeddings, `llama3.1` meta extraction
+- **@huggingface/transformers** — local embedding provider (Tier 2, opt-in), ~25 MB model download on first use
+- **Ollama** _(optional)_ — `embeddinggemma:300m` embeddings, `gemma4:e4b-mlx` meta extraction
 - **@modelcontextprotocol/sdk** — stdio MCP transport

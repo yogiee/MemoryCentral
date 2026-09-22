@@ -2,8 +2,8 @@
 
 **Date:** 2026-06-13
 **Author:** Claude (Opus 4.8) + Yogi
-**Status:** ✅ Validated by re-tuned BenchLLAMA (2026-06-13, 8 models). Our A/B result reproduced blind. Production still on `nomic-embed-text` pending go-ahead to switch to **`embeddinggemma:300m`**.
-**Scripts:** `server/diag_embed.js` (read-only A/B harness), `server/reembed.js` (migration, unused so far)
+**Status:** ✅ Validated by re-tuned BenchLLAMA (2026-06-13, 8 models). Our A/B result reproduced blind. **Switched:** production moved to **`embeddinggemma:300m`** on 2026-06-13 (commit 0f18908). The body below is the pre-switch record; references to nomic as "current production" are historical.
+**Scripts:** `server/diag_embed.js` (read-only A/B harness), `server/reembed.js` (migration, used for the 06-13 switch)
 
 ---
 
