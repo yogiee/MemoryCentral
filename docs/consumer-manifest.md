@@ -49,14 +49,14 @@ consumer writes only its own `<consumer>.json` (consumer→producer). Schema 2 i
 {
   "schema": 2,
   "consumer": "memoryCentral",
-  "generated": "2026-06-15T07:36:07Z",
+  "generated": "2026-09-22T19:17:02Z",
   "selection_policy": "requirements-fit",
-  "source": "benchllama@2026-06-15",
+  "source": "benchllama@2026-09-02",
   "assignments": {
     "embed":   { "model": "embeddinggemma:300m", "capability": "embedding", "basis": "embedding_long", "tier": "primary" },
-    "extract": { "model": "gemma4:latest",       "capability": "manual",    "tier": "primary" }
+    "extract": { "model": "gemma4:e4b-mlx",      "capability": "manual",    "tier": "primary" }
   },
-  "models_in_use": ["embeddinggemma:300m", "gemma4:latest"],
+  "models_in_use": ["embeddinggemma:300m", "gemma4:e4b-mlx"],
   "gaps": [
     { "capability": "embedding", "observed_with": "granite-embedding:30m",
       "issue": "512-token window truncated 66% of the corpus",
@@ -125,10 +125,10 @@ by the BenchLLAMA eval. If/when an importer lands, it should also call `writeMan
 
 ---
 
-## Pending — BenchLLAMA drop-report (producer side)
+## Shipped — BenchLLAMA drop-report (producer side, `consumers.py`)
 
 Globs `~/.config/ollama-consumers/*.json`, unions every `models_in_use` into the working set, then
 per installed Ollama model classifies **KEEP / ADVISE-SWITCH / DROP-candidate / UNSCORED**, never
 auto-dropping an in-use model. MemoryCentral's manifest contributes `embeddinggemma:300m` and
-`gemma4:latest` to the protected set, plus the `requirements-fit` policy + `rationale` that should
-inform EMB-battery tuning. Spec lives on the OllamaMCP side.
+`gemma4:e4b-mlx` to the protected set, plus the `requirements-fit` policy + `rationale` that should
+inform EMB-battery tuning. Implemented in BenchLLAMA's `consumers.py` (confirmed 2026-08-23); extract is a `manual` pin, so it is protected but never drop-evaluated.
