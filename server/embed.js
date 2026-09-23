@@ -36,6 +36,19 @@ export const EXTRACT_MODEL = process.env.EXTRACT_MODEL ?? 'gemma4:e4b-mlx';
 // model for a hook that runs at session end, not a reason to raise the ceiling.
 export const EXTRACT_TIMEOUT_MS = Number(process.env.EXTRACT_TIMEOUT_MS ?? 60_000);
 
+// Context window for the extract call. Without it Ollama allocates the model's full
+// native window (131k-262k), which pre-sizes a GGUF model's KV cache to 13-32 GB for a
+// prompt that is ~1k tokens (3000-char slice + instructions). 4096 leaves ~3x headroom.
+// MLX models allocate lazily, so this doesn't shrink gemma4:e4b-mlx (its ~9.4 GB is
+// weights) — it's what makes a small GGUF pin viable. BenchLLAMA probe, 2026-09-23.
+export const EXTRACT_NUM_CTX = Number(process.env.EXTRACT_NUM_CTX ?? 4096);
+
+// Thinking is off for extraction. Thinking-capable models default to on: e4b spent
+// 566-833 tokens (9-15s) reasoning before a ~50-token JSON answer, with no quality
+// gain; others (qwen3.5:4b-mlx, granite4.2:3b) think past EXTRACT_TIMEOUT_MS.
+// Non-thinking models ignore think:false.
+export const EXTRACT_THINK = false;
+
 // Closed vocabulary for project stack tags. Used both to prompt the extractor and to
 // post-filter its output — no model reliably respects an in-prompt allowlist, so we
 // enforce it here. Keep in sync with find_by_stack expectations.
@@ -260,7 +273,8 @@ ${content.slice(0, 3000)}`,
           },
         ],
         stream: false,
-        options: { temperature: 0 },
+        think: EXTRACT_THINK,
+        options: { temperature: 0, num_ctx: EXTRACT_NUM_CTX },
       }),
     });
     clearTimeout(timeout);
