@@ -31,7 +31,7 @@ A meta-project that aggregates, tracks, and surfaces memory snapshots, progress,
 
 ### Local AI layer (Ollama)
 - `embeddinggemma:300m` — vector embeddings for semantic search (Tier 1, recommended; 768-dim, clean to ~8k chars). Switched from `nomic-embed-text` 2026-06-13 — see `docs/embedding-eval-2026-06-13.md`
-- `gemma4:e4b-mlx` — auto-extracts project descriptions and stack tags during sync (`EXTRACT_MODEL`, 60s abort budget; pinned 2026-08-23, replacing `gemma4:latest` → which replaced `llama3.1`)
+- `granite4.2:3b` — auto-extracts project descriptions and stack tags during sync (`EXTRACT_MODEL`, 60s abort budget; pinned 2026-09-23 for residency, 2.6 GB vs `gemma4:e4b-mlx`'s 9.4 GB). Only viable because the call sends `num_ctx: 4096` + `think: false` (`EXTRACT_NUM_CTX` / `EXTRACT_THINK`) — without them it's 13.3 GB and thinks past the budget. Pin history: `llama3.1` → `gemma4:latest` → `gemma4:e4b-mlx` → `granite4.2:3b`
 - Both pins are published to BenchLLAMA via the consumer manifest (`server/manifest.js` → `~/.config/ollama-consumers/memoryCentral.json`)
 - The embedding provider is a setup-time choice (`embedProvider` in `~/.memorycentralrc.json`: `ollama` default, or `local` = `@huggingface/transformers` `all-MiniLM-L6-v2`, Tier 2) — never a runtime fallback. If the provider is down, `find_similar` degrades to in-context Claude matching (Tier 3) and new memories stay pending until the backlog retry embeds them
 

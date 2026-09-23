@@ -22,12 +22,19 @@ export const EMBED_MODEL = process.env.EMBED_MODEL ?? 'embeddinggemma:300m';
 // Note the stack tags mostly don't depend on this — a project's `## Stack` block in
 // CLAUDE.md wins when present (see refreshProjectMeta), so in practice the model
 // supplies the description and little else.
-// Pinned 2026-08-23, replacing gemma4:latest after it was uninstalled and began
-// 404'ing silently — the same failure mode that took out the llama3.1:latest pin it
-// had itself replaced on 2026-06-15. Two strikes: verify this tag still resolves
-// before trusting a sync's extracted metadata.
+// Pinned 2026-09-23 to granite4.2:3b, replacing gemma4:e4b-mlx for residency: e4b
+// holds ~9.4 GB whatever its settings (MLX, weights-bound), enough to evict other
+// models at session end. granite4.2:3b is 2.6 GB — but ONLY with EXTRACT_NUM_CTX
+// and EXTRACT_THINK below. Without them it pre-allocates 13.3 GB and thinks for
+// 24-85s, past the budget. Measured on all 27 projects' real payloads (same call,
+// both models): granite 0 failures, 0.9-3.2s (median 1.6s) vs e4b 1.1-5.2s (2.4s);
+// descriptions comparable. It dumped the whole tag allowlist once (see
+// MAX_STACK_TAGS). e4b's tags were slightly better on projects with no `## Stack`.
+// History: gemma4:latest (2026-08-23 → uninstalled, 404'd silently) and before it
+// llama3.1:latest (2026-06-15, same death). Verify this tag still resolves before
+// trusting a sync's extracted metadata.
 // Centralized + exported so the consumer manifest (manifest.js) reports one source of truth.
-export const EXTRACT_MODEL = process.env.EXTRACT_MODEL ?? 'gemma4:e4b-mlx';
+export const EXTRACT_MODEL = process.env.EXTRACT_MODEL ?? 'granite4.2:3b';
 
 // Abort budget for one extraction. Raised 30s → 60s on 2026-08-23: the pinned model
 // needs ~24s on a real corpus, and 30s left only 19% headroom — thin enough that a
@@ -56,6 +63,15 @@ export const STACK_TAGS = [
   'swift', 'swiftui', 'node', 'typescript', 'python', 'react', 'electron',
   'bash', 'homeassistant', 'go', 'rust', 'wordpress', 'html', 'css',
 ];
+
+// A stack longer than this is the model reciting the allowlist, not describing a
+// project — the allowlist filter can't catch that, since every tag is valid.
+// granite4.2:3b returned all 14 for WallP; llama3.2:3b did the same in BenchLLAMA's
+// probe. An honest stack tops out around 7 (an Electron app: node, typescript, react,
+// electron, html, css, bash); past 9 it spans unrelated ecosystems (swift + go +
+// wordpress…). Such a stack is dropped to [] — no tags beats wrong ones. Only
+// model-extracted stacks pass through here; a `## Stack` block is never capped.
+export const MAX_STACK_TAGS = 9;
 
 // Max input chars per embed. Raised 2000→6000 with the emb-gemma switch — sits inside
 // emb-gemma's clean ~8k-char (2048-tok) window, capturing long-memory body content that
@@ -94,7 +110,7 @@ export function activeModel() {
 // Abort budget for one embed call. Raised 10s -> 30s on 2026-08-28 after the
 // cold-start hypothesis (defect 4 of the backlog-gaps report) was finally
 // measured rather than assumed. Worst observed case, repeated: an embed issued
-// while gemma4:e4b-mlx (8.5 GB, the EXTRACT_MODEL) is cold-loading — which is
+// while gemma4:e4b-mlx (8.5 GB, the EXTRACT_MODEL until 2026-09-23) is cold-loading — which is
 // exactly what a sync does, since refreshProjectMeta and the embed pass run in
 // the same run — takes 4.4-5.3s against the old 10s budget.
 //
@@ -299,6 +315,7 @@ ${content.slice(0, 3000)}`,
     if (Array.isArray(meta.stack)) {
       const allow = new Set(STACK_TAGS);
       meta.stack = [...new Set(meta.stack.map(t => String(t).toLowerCase().trim()))].filter(t => allow.has(t));
+      if (meta.stack.length > MAX_STACK_TAGS) meta.stack = [];
     } else {
       meta.stack = [];
     }

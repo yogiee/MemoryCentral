@@ -54,9 +54,9 @@ consumer writes only its own `<consumer>.json` (consumer→producer). Schema 2 i
   "source": "benchllama@2026-09-02",
   "assignments": {
     "embed":   { "model": "embeddinggemma:300m", "capability": "embedding", "basis": "embedding_long", "tier": "primary" },
-    "extract": { "model": "gemma4:e4b-mlx",      "capability": "manual",    "tier": "primary" }
+    "extract": { "model": "granite4.2:3b",       "capability": "manual",    "tier": "primary" }
   },
-  "models_in_use": ["embeddinggemma:300m", "gemma4:e4b-mlx"],
+  "models_in_use": ["embeddinggemma:300m", "granite4.2:3b"],
   "gaps": [
     { "capability": "embedding", "observed_with": "granite-embedding:30m",
       "issue": "512-token window truncated 66% of the corpus",
@@ -130,5 +130,5 @@ by the BenchLLAMA eval. If/when an importer lands, it should also call `writeMan
 Globs `~/.config/ollama-consumers/*.json`, unions every `models_in_use` into the working set, then
 per installed Ollama model classifies **KEEP / ADVISE-SWITCH / DROP-candidate / UNSCORED**, never
 auto-dropping an in-use model. MemoryCentral's manifest contributes `embeddinggemma:300m` and
-`gemma4:e4b-mlx` to the protected set, plus the `requirements-fit` policy + `rationale` that should
+`granite4.2:3b` (`gemma4:e4b-mlx` until 2026-09-23) to the protected set, plus the `requirements-fit` policy + `rationale` that should
 inform EMB-battery tuning. Implemented in BenchLLAMA's `consumers.py` (confirmed 2026-08-23); extract is a `manual` pin, so it is protected but never drop-evaluated.

@@ -218,7 +218,7 @@ If the configured provider is unavailable, `find_similar` returns all memory con
 
 ### Project metadata extraction
 
-When Ollama is running, sync also uses `gemma4:e4b-mlx` (override with `EXTRACT_MODEL`) to auto-extract human-readable descriptions and stack tags for each project. Without Ollama, descriptions show as `_unknown_` — but all memory content is still fully indexed and searchable.
+When Ollama is running, sync also uses `granite4.2:3b` (override with `EXTRACT_MODEL`) to auto-extract human-readable descriptions and stack tags for each project. Without Ollama, descriptions show as `_unknown_` — but all memory content is still fully indexed and searchable.
 
 ### Capability summary
 
@@ -266,5 +266,5 @@ Personal data (memories, snapshots, database) lives locally and never leaves you
 - **Node.js 22+** — `node:sqlite` built-in (zero native deps for core)
 - **SQLite** — WAL mode, FTS5 full-text search, vector embeddings as JSON
 - **@huggingface/transformers** — local embedding provider (Tier 2, opt-in), ~25 MB model download on first use
-- **Ollama** _(optional)_ — `embeddinggemma:300m` embeddings, `gemma4:e4b-mlx` meta extraction
+- **Ollama** _(optional)_ — `embeddinggemma:300m` embeddings, `granite4.2:3b` meta extraction
 - **@modelcontextprotocol/sdk** — stdio MCP transport
