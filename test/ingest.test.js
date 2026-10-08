@@ -368,3 +368,17 @@ test('a description set by an AI tool beats auto-extraction; a block beats both'
     assert.deepEqual(p, { description: 'From the block.', meta_source: 'block' });
   } finally { globalThis.fetch = real; }
 });
+
+test('a known folder keeps its project name; a block rename moves its memories along', async () => {
+  const { repo } = claudeProject('app', { 'a.md': 'alpha', 'b.md': 'beta' });
+  await sync();
+  db.prepare("UPDATE projects SET name='legacy-name' WHERE name='app'").run(); // as an older decoder named it
+  await sync();
+  assert.equal(live('legacy-name').length, 2, 'not renamed by a better path decoder');
+  assert.equal(live('app').length, 0);
+
+  writeFileSync(join(repo, 'AGENTS.md'), '## MemoryCentral\nProject: Billing\n');
+  await sync();
+  assert.equal(live('Billing').length, 2, 'an explicit Project: line renames, memories follow');
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM memories_fts WHERE project_name='Billing'").get().n, 2);
+});

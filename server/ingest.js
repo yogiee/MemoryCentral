@@ -54,12 +54,25 @@ export function ensureProject(db, name, { repoPath = null, kind = 'native', now 
   return db.prepare('SELECT * FROM projects WHERE name=?').get(name);
 }
 
+// A folder that moves to a different project (a block's `Project:` line renamed
+// it) takes its memories along; leaving them behind would split one project's
+// memories across two names.
 export function ensureSource(db, projectId, kind, root) {
+  const before = db.prepare('SELECT id, project_id FROM sources WHERE kind=? AND root=?').get(kind, root);
   db.prepare(`
     INSERT INTO sources (project_id, kind, root) VALUES (?, ?, ?)
     ON CONFLICT(kind, root) DO UPDATE SET project_id = excluded.project_id
   `).run(projectId, kind, root);
-  return db.prepare('SELECT * FROM sources WHERE kind=? AND root=?').get(kind, root);
+  const source = db.prepare('SELECT * FROM sources WHERE kind=? AND root=?').get(kind, root);
+  if (before && before.project_id !== projectId) {
+    const name = db.prepare('SELECT name FROM projects WHERE id=?').get(projectId).name;
+    for (const m of db.prepare('SELECT id, filename FROM memories WHERE source_id=?').all(source.id)) {
+      if (db.prepare('SELECT 1 FROM memories WHERE project_id=? AND filename=?').get(projectId, m.filename)) continue;
+      db.prepare('UPDATE memories SET project_id=? WHERE id=?').run(projectId, m.id);
+      db.prepare('UPDATE memories_fts SET project_name=? WHERE rowid=?').run(name, m.id);
+    }
+  }
+  return source;
 }
 
 // Moves a live memory into the tombstone table. Its vectors go with the row
@@ -291,8 +304,14 @@ async function runSync(db, { onProgress, embed, now }) {
       for (const d of adapter.discover(db)) {
         // A block's `Project:` line names the project, overriding the folder-derived
         // name — the way two repos that are both called "app" are told apart.
+        // Otherwise a folder we already know keeps its project's name: a better
+        // path decoder (2026-10-09 resolved "Japan 2030" where the old one fell
+        // back to "Japan-2030") must not rename a project under its user.
         const declared = d.repoPath ? readProjectMeta(d.repoPath)?.project : null;
-        found.push({ kind, ...d, project: declared || d.project });
+        const known = !declared && db.prepare(`
+          SELECT p.name FROM sources s JOIN projects p ON p.id = s.project_id WHERE s.kind=? AND s.root=?
+        `).get(kind, d.root);
+        found.push({ kind, ...d, project: declared || known?.name || d.project });
       }
       adapterOk[kind] = true;
     } catch (err) {

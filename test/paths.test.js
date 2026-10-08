@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, rmSync, readdirSync, existsSync } from 'fs';
 import { join, basename } from 'path';
 import { tmpdir, homedir } from 'os';
-import { resolveProject } from '../server/paths.js';
+import { resolveProject, encodeClaudePath } from '../server/paths.js';
 
 // Encode an absolute path the way Claude Code does.
 const enc = p => p.replace(/[/\\]/g, '-');
@@ -67,6 +67,24 @@ test('missing leaf yields path:null but keeps the project name', () => {
   } finally {
     rmSync(home, { recursive: true, force: true });
   }
+});
+
+// Claude Code replaces EVERY non-alphanumeric character, not just separators.
+test('dots, underscores and spaces in folder names decode', () => {
+  const home = mkdtempSync(join(tmpdir(), 'mc-paths-'));
+  try {
+    mkdirSync(join(home, 'Documents', 'Japan 2030'), { recursive: true });
+    mkdirSync(join(home, 'WORK', 'my_app.v2'), { recursive: true });
+    assert.deepEqual(resolveProject(encodeClaudePath(home) + '-Documents-Japan-2030', home),
+      { name: 'Japan 2030', path: join(home, 'Documents', 'Japan 2030') });
+    assert.equal(resolveProject(encodeClaudePath(home) + '-WORK-my-app-v2', home).name, 'my_app.v2');
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('Windows paths encode the way Claude Code writes them', () => {
+  assert.equal(encodeClaudePath('C:\\Users\\Dev One\\my_proj'), 'C--Users-Dev-One-my-proj');
 });
 
 test('encodings outside the home dir return path:null', () => {

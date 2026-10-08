@@ -1,4 +1,4 @@
-import { existsSync } from 'fs';
+import { existsSync, readdirSync, statSync } from 'fs';
 import { join, basename, dirname, resolve } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
@@ -44,56 +44,74 @@ export function safeDirName(name) {
 
 // Decode a Claude-encoded directory name back to { name, path }.
 //
-// Claude Code encodes a project's absolute path by replacing '/' with '-', which
-// is lossy: directory names may themselves contain '-', so a single encoding can
-// have several valid readings. `-Users-yogi-WORK-work-net-client-app` reads as
-// both WORK/work-net/client-app and WORK/work/net-client-app, and only the
-// filesystem can say which is real.
+// Claude Code names a project's folder after its absolute path with EVERY
+// non-alphanumeric character replaced by '-': '/Users/me/my_app.v2' becomes
+// '-Users-me-my-app-v2', and on Windows 'C:\\Users\\Dev\\proj' becomes
+// 'C--Users-Dev-proj'. That is lossy — a '-' may have been a separator, a hyphen,
+// a dot, an underscore or a space — so only the filesystem can say which reading
+// is real. Before 2026-10-09 this decoder assumed only separators had been
+// replaced, which failed on every Windows path and on any folder name with a dot,
+// underscore or space.
 //
-// A greedy left-to-right walk commits to the first segment that exists and never
-// revisits it, so the moment a shorter sibling appears (creating ~/WORK/work
-// next to ~/WORK/work-net) it strands itself on a path that doesn't exist and
-// invents a project name from it. Verify every step and backtrack instead.
+// The walk matches the encoded string against real directory entries, encoding
+// each entry the same way, and backtracks when a branch dead-ends (a sibling
+// `foo` next to `foo-bar` must not strand it). It starts at the home directory,
+// else at the filesystem root the encoding names ('/' on POSIX, the drive on
+// Windows).
 //
-// path is null when the encoding lies outside the home dir (not reconstructable)
-// or when no segmentation exists on disk — callers must guard before reading it.
-// `home` is injectable so tests can build ambiguous fixtures in a tmpdir.
+// path is null when nothing on disk matches — callers must guard before reading
+// it. `home` is injectable so tests can build fixtures in a tmpdir.
+export const encodeClaudePath = p => String(p).replace(/[^a-zA-Z0-9]/g, '-');
+
+function isDir(p) {
+  try { return statSync(p).isDirectory(); } catch { return false; }
+}
+
+// Depth-first match of encoded[pos..] against the directory tree under `dir`.
+// Returns the deepest full match, or { partial } — the deepest directory reached
+// and where in the string it stopped — for the missing-leaf fallback.
+function walk(dir, encoded, pos) {
+  if (pos >= encoded.length) return { path: dir };
+  let entries;
+  try { entries = readdirSync(dir); } catch { entries = []; }
+  // Shortest entry first, so unambiguous paths resolve exactly as a greedy walk.
+  const candidates = entries
+    .map(e => ({ e, enc: encodeClaudePath(e) }))
+    .filter(({ enc }) => enc && encoded.startsWith(enc, pos) &&
+      (pos + enc.length === encoded.length || encoded[pos + enc.length] === '-'))
+    .sort((a, b) => a.enc.length - b.enc.length);
+  let best = { partial: { dir, pos } };
+  for (const { e, enc } of candidates) {
+    const next = join(dir, e);
+    if (!isDir(next)) continue;
+    const r = walk(next, encoded, pos + enc.length + 1);
+    if (r.path) return r;
+    if (r.partial.pos > best.partial.pos) best = r;
+  }
+  return best;
+}
+
 export function resolveProject(encoded, home = homedir()) {
-  const homeEnc = home.replace(/[/\\]/g, '-');
-  if (!encoded.startsWith(homeEnc)) return { name: encoded.replace(/^-/, ''), path: null };
-  const rel = encoded.slice(homeEnc.length).replace(/^-/, '');
-  if (!rel) return { name: 'home', path: home };
-  const tokens = rel.split('-');
+  const homeEnc = encodeClaudePath(home);
+  if (encoded === homeEnc) return { name: 'home', path: home };
 
-  // Depth-first over segmentations, shortest segment first — so unambiguous
-  // paths resolve exactly as the old greedy walk did.
-  function walk(current, i) {
-    if (i === tokens.length) return current;
-    let seg = tokens[i];
-    for (let j = i; j < tokens.length; j++) {
-      if (j > i) seg += '-' + tokens[j];
-      const next = join(current, seg);
-      if (!existsSync(next)) continue;
-      const found = walk(next, j + 1);
-      if (found) return found;
+  let start = null;
+  if (encoded.startsWith(homeEnc + '-')) start = { dir: home, pos: homeEnc.length + 1 };
+  else if (/^[A-Za-z]--/.test(encoded) && process.platform === 'win32') start = { dir: `${encoded[0]}:\\`, pos: 3 };
+  else if (encoded.startsWith('-') && process.platform !== 'win32') start = { dir: '/', pos: 1 };
+
+  if (start) {
+    const r = walk(start.dir, encoded, start.pos);
+    if (r.path) return { name: basename(r.path), path: r.path };
+    // The project folder was moved or deleted, but its memories remain. Keep a
+    // stable name so the existing project row still matches on the next sync:
+    // under the home dir, the unmatched tail; elsewhere, the whole encoding.
+    if (start.dir === home) {
+      const tail = encoded.slice(r.partial.pos).replace(/^-+/, '');
+      return { name: tail || basename(r.partial.dir), path: null };
     }
-    return null;
   }
-
-  const resolved = walk(home, 0);
-  if (resolved) return { name: basename(resolved), path: resolved };
-
-  // Nothing on disk matches — the project directory was moved or deleted, but its
-  // memories still live under ~/.claude/projects. Fall back to the old greedy
-  // walk's NAME so the existing DB row still matches on re-sync, with path:null
-  // so callers skip it instead of reading a phantom path.
-  let current = home, i = 0;
-  while (i < tokens.length) {
-    let seg = tokens[i++];
-    while (!existsSync(join(current, seg)) && i < tokens.length) seg += '-' + tokens[i++];
-    current = join(current, seg);
-  }
-  return { name: basename(current), path: null };
+  return { name: encoded.replace(/^-+/, ''), path: null };
 }
 
 // Name-only convenience for callers that don't need the resolved path.
