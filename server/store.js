@@ -74,6 +74,25 @@ export async function saveMemory(db, { project: name, filename, content, project
   return result;
 }
 
+// An AI tool describing a project it is working in. It knows the project better
+// than any extraction could, and it costs nothing — so this beats auto-extraction,
+// and only the project's own MemoryCentral block beats it (ingest.js).
+// Returns { ok, overriddenBy? } — overriddenBy names the block that will win.
+export function setProjectInfo(db, { project: name, description, stack, projectPath = null }) {
+  if (!String(name ?? '').trim()) return { ok: false, reason: 'project is required' };
+  const desc = String(description ?? '').replace(/\s+/g, ' ').trim();
+  if (!desc && !stack?.length) return { ok: false, reason: 'give a description, a stack, or both' };
+  const project = ensureProject(db, name.trim(), { repoPath: projectPath, kind: 'native' });
+  if (projectPath && project.repo_path !== projectPath) db.prepare('UPDATE projects SET repo_path=? WHERE id=?').run(projectPath, project.id);
+  const tags = Array.isArray(stack)
+    ? [...new Set(stack.map(t => String(t).toLowerCase().trim()).filter(t => /^[a-z][a-z0-9.@#+_-]{0,23}$/.test(t)))]
+    : null;
+  db.prepare(`UPDATE projects SET description=COALESCE(?, description), stack=COALESCE(?, stack), meta_source='agent' WHERE id=?`)
+    .run(desc || null, tags?.length ? JSON.stringify(tags) : null, project.id);
+  const fresh = db.prepare('SELECT meta_file FROM projects WHERE id=?').get(project.id);
+  return { ok: true, overriddenBy: fresh.meta_file || null };
+}
+
 // Deliberate delete: removes the file and the memory — no tombstone, because the
 // caller asked for exactly this. Any earlier tombstone of the same name goes too.
 export function deleteMemory(db, { project: name, filename }) {

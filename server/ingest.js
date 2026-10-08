@@ -26,6 +26,8 @@ import { memoryType, extractTitle } from './meta.js';
 import { ADAPTERS, scanSource } from './sources.js';
 import { readProjectMeta, fallbackDescription } from './projectBlock.js';
 import { getSetting, acquireLease, releaseLease, importRcOnce } from './settings.js';
+import { extractConfig, extractProjectMeta } from './extract.js';
+import { createHash } from 'crypto';
 import { drainPending, countPending, embedMemory } from './backlog.js';
 import { generatedDir, safeDirName } from './paths.js';
 
@@ -171,21 +173,55 @@ function reconcile(db, { project, source, files, now, stats, toEmbed }) {
   return { status: 'ok', note: null };
 }
 
-// Applies a project's own declaration (its MemoryCentral block, or legacy `## Stack`)
-// over what is stored. Without a declaration a stored description is kept; a project
-// with none at all takes the opening paragraph of its instructions file or README.
-// No model calls.
-function refreshProjectMeta(db, project) {
+// Project metadata, highest precedence first:
+//   1. the project's own MemoryCentral block (or legacy `## Stack`), and a stack
+//      override set by the user
+//   2. what an AI tool set with set_project_info
+//   3. optional Ollama extraction (extract.js) — only when the user enabled it, and
+//      only re-run when the project's memories changed
+//   4. what is already stored (including pre-2026-10-09 extractions)
+//   5. the opening paragraph of the README / instructions file
+// A guess never overwrites a deliberate value; meta_source records which won.
+async function refreshProjectMeta(db, project, extract) {
   const overrides = getSetting(db, 'stack.overrides', {});
   const declared = readProjectMeta(project.repo_path);
-  let description = project.description;
+  let description = project.description || '';
+  let source = project.meta_source || (description ? 'legacy' : null);
   let stack = JSON.parse(project.stack || '[]');
-  if (declared?.description) description = declared.description;
-  else if (!description && project.repo_path) description = fallbackDescription(project.repo_path) || '';
+  let metaHash = project.meta_hash;
+
+  if (declared?.description) {
+    description = declared.description;
+    source = 'block';
+  } else if (source === 'block') {
+    source = null; // the block was removed: fall through to the next best
+  }
+
+  const wantsAuto = extract.enabled && source !== 'block' && source !== 'agent';
+  if (wantsAuto) {
+    const memories = db.prepare('SELECT title, content FROM memories WHERE project_id=? ORDER BY synced_at DESC').all(project.id);
+    const corpus = memories.map(m => `${m.title}\n${m.content}`).join('\n\n');
+    const hash = createHash('sha256').update(corpus).digest('hex').slice(0, 16);
+    if (corpus && (hash !== project.meta_hash || source !== 'auto')) {
+      const meta = await extractProjectMeta(corpus, extract);
+      if (meta) {
+        description = meta.description;
+        source = 'auto';
+        metaHash = hash;
+        if (!declared?.stack && !overrides[project.name] && meta.stack.length) stack = meta.stack;
+      }
+    }
+  }
+
+  if (!description && project.repo_path) {
+    description = fallbackDescription(project.repo_path) || '';
+    source = description ? 'readme' : null;
+  }
   if (overrides[project.name]) stack = overrides[project.name];
   else if (declared?.stack) stack = declared.stack;
-  db.prepare('UPDATE projects SET description=?, stack=?, meta_file=? WHERE id=?')
-    .run(description || '', JSON.stringify(stack), declared?.file || null, project.id);
+
+  db.prepare('UPDATE projects SET description=?, stack=?, meta_file=?, meta_source=?, meta_hash=? WHERE id=?')
+    .run(description, JSON.stringify(stack), declared?.file || null, source, metaHash ?? null, project.id);
 }
 
 function writeGenerated(db) {
@@ -316,7 +352,12 @@ async function runSync(db, { onProgress, embed, now }) {
   stats.purged = Number(db.prepare('DELETE FROM memory_tombstones WHERE deleted_at < ?').run(cutoff).changes);
 
   // 5. Project metadata from each project's own declaration.
-  for (const p of db.prepare('SELECT * FROM projects').all()) refreshProjectMeta(db, p);
+  const extract = extractConfig(db);
+  const projects = db.prepare('SELECT * FROM projects').all();
+  for (let i = 0; i < projects.length; i++) {
+    if (extract.enabled) onProgress({ phase: 'describe', i: i + 1, n: projects.length, project: projects[i].name });
+    await refreshProjectMeta(db, projects[i], extract);
+  }
   stats.projects = db.prepare('SELECT COUNT(*) AS n FROM projects').get().n;
 
   // 6. Vectors: changed memories first, then anything older still pending. A failing

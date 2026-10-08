@@ -7,7 +7,7 @@ import { openDb, ftsQuery } from './db.js';
 import { embed, cosineSimilarity, useSettingsDb, activeConfig } from './embed.js';
 import { countPending, startBackfillLoop } from './backlog.js';
 import { syncAll, formatSyncStats } from './ingest.js';
-import { saveMemory, deleteMemory } from './store.js';
+import { saveMemory, deleteMemory, setProjectInfo } from './store.js';
 import { generatedDir } from './paths.js';
 import { getSetting } from './settings.js';
 import { start as startDashboard } from './dashboard.js';
@@ -285,6 +285,24 @@ server.tool(
 );
 
 server.tool(
+  'set_project_info',
+  "Describe a project: a one-sentence description and stack tags, shown in list_projects and used by find_by_stack. " +
+  "Use it when the project you are working in has no description. A MemoryCentral block in the repo's instructions file takes precedence.",
+  {
+    project:      z.string().describe('Project name, as in save_memory'),
+    description:  z.string().optional().describe('One sentence: what the project is or does'),
+    stack:        z.array(z.string()).optional().describe('Lowercase technology tags, e.g. ["node", "react", "postgres"]'),
+    project_path: z.string().optional().describe("Absolute path of the project's repository, if known"),
+  },
+  async ({ project, description, stack, project_path }) => {
+    const r = setProjectInfo(db, { project, description, stack, projectPath: project_path ?? null });
+    if (!r.ok) return { content: [{ type: 'text', text: `Not saved: ${r.reason}` }], isError: true };
+    const note = r.overriddenBy ? ` Note: the project's MemoryCentral block in ${r.overriddenBy} takes precedence — edit that to change it.` : '';
+    return { content: [{ type: 'text', text: `Saved project info for ${project}.${note}` }] };
+  },
+);
+
+server.tool(
   'delete_memory',
   'Permanently delete a memory that is wrong or no longer true (stale decision, changed spec). Removes its file and its index entry. ' +
   'Use only when the user wants it gone; to correct a memory, save_memory the same filename instead.',
@@ -343,7 +361,7 @@ startDashboard(Number(process.env.MC_DASHBOARD_PORT) || 9980);
 
 // Refresh the consumer manifest for BenchLLAMA every session launch (Ollama-independent,
 // best-effort). See server/manifest.js + docs/consumer-manifest.md.
-if (process.env.MC_MANIFEST !== '0') writeManifest();
+writeManifest(db);
 
 // The server keeps the index current itself, so no harness needs a hook: a sync
 // shortly after boot, then every SYNC_INTERVAL_MS. Every harness runs its own

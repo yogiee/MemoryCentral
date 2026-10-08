@@ -39,10 +39,15 @@ All keys are optional; unknown keys are ignored. Bullets and bold are fine (`- *
 | `Stack:` | Comma-separated tags (lowercase), used by `find_by_stack` and the dashboard's grouping |
 | `Use:` | Not read by MemoryCentral. It is there for the AI tool, which follows it. |
 
-## Without a block
+## Where a project's description comes from
 
-- **Stack:** a legacy `## Stack` section (`node, sqlite, mcp` on one line, or a bulleted list) in any of the files above still works.
-- **Description:** MemoryCentral falls back to the opening paragraph of the README, then of the instructions file. A block is better: those paragraphs are often installation notes or directions to the AI rather than a description.
-- **Overrides:** a stack override set on the dashboard (or in the old `~/.memorycentralrc.json` `stackOverrides`) wins over everything.
+Highest precedence first:
+
+1. **The block.** Plus a stack override set on the dashboard, or in the old `~/.memorycentralrc.json` `stackOverrides`; an override wins for the stack. A legacy `## Stack` section (`node, sqlite, mcp` on one line, or a bulleted list) in any of the files above still supplies the stack.
+2. **An AI tool.** While working in a project that has no description, a connected AI tool can set one with `set_project_info`, and MemoryCentral's instructions ask it to. It knows the project, and it costs nothing.
+3. **Automatic description** *(optional, off by default)*. Turned on in **Settings → Project descriptions**, available when Ollama is the search engine. A small local model reads the start of a project's memories and writes a description and stack tags. It re-runs only when that project's memories change. This suits apps whose memory isn't organised around repositories, such as an app with free-form chats, where no instructions file exists. Turning it on downloads the model (about 2.2 GB) after showing what it does.
+4. **The README.** Failing all of the above, MemoryCentral uses the opening paragraph of the README, then of the instructions file. These are often installation notes, so treat them as a last resort.
+
+A lower level never overwrites a higher one. The dashboard records which level each description came from.
 
 Changes are picked up on the next sync, which happens within a few minutes on its own.

@@ -13,6 +13,8 @@ Environment variables override settings. That is useful for testing, or for pinn
 | Ollama model (`embed.ollama.model`) | an embedding model tag | depends on the platform, see below |
 | Built-in model (`embed.local.model`) | a built-in model id | see [embedding-eval-2026-10-09.md](embedding-eval-2026-10-09.md) |
 | Stack overrides (`stack.overrides`) | `{ "Project": ["tag", …] }` | none |
+| Automatic project descriptions (`extract.enabled`) | on / off (only with Ollama) | off |
+| Description model (`extract.model`) | an Ollama chat model | `granite4.2:3b` (runs on every platform) |
 
 ### Which Ollama model by default
 
@@ -38,6 +40,8 @@ Changing the engine or model re-indexes every memory in the background. Keyword 
 | `MC_SYNC_INTERVAL_MS` | How often a running server re-syncs (default 5 minutes) |
 | `EMBED_TIMEOUT_MS` | Abort budget for one embedding request (default 30 s) |
 | `EMBED_KEEP_ALIVE` | How long Ollama keeps the embedding model loaded (default `30m`) |
+| `EXTRACT_MODEL` | Overrides the description model (when automatic descriptions are on) |
+| `EXTRACT_TIMEOUT_MS` | Abort budget for describing one project (default 60 s) |
 | `EMBED_CHUNK_CHARS` / `EMBED_CHUNK_OVERLAP` | Default chunk size and overlap for models without their own |
 | `MC_CLAUDE_PROJECTS` | Where Claude Code keeps its project folders (default `~/.claude/projects`) |
 

@@ -19,6 +19,7 @@ Tools:
 - list_projects / get_project_summary(project) / get_project_memories(project): browse.
 - save_memory(project, filename, content, project_path?): create or update a memory. Re-saving a filename updates it in place.
 - delete_memory(project, filename): only when the user wants a wrong or stale memory gone.
+- set_project_info(project, description, stack): if the project you are working in shows no description, set one.
 
 Conventions:
 - Project name: the "Project:" line of the repository's "## MemoryCentral" block (in AGENTS.md, CLAUDE.md, \

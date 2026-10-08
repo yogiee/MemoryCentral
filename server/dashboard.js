@@ -432,6 +432,7 @@ async function handlePost(req, res) {
   const id = Number(path.match(/\/(\d+)\//)?.[1]);
   if (path === '/api/sync')            return handleSync(res);
   if (path === '/api/settings')        return withDb(db => setup.saveSettings(db, body)).then(r => json(res, r));
+  if (path === '/api/settings/extract') return withDb(db => setup.saveExtractSettings(db, body)).then(r => json(res, r));
   if (path === '/api/setup/complete')  return withDb(db => setup.completeSetup(db)).then(r => json(res, r));
   if (path === '/api/ollama/pull')     return setup.streamOllamaPull(res, body);
   if (path === '/api/local/prepare')   return setup.streamLocalPrepare(res, body);

@@ -73,6 +73,7 @@ Once connected, your AI tool knows when to reach for MemoryCentral. MemoryCentra
 | `search_memories` | Search for names: a library, an error message, a command |
 | `find_by_stack` | Projects using a technology |
 | `save_memory` / `delete_memory` | Create, update or remove a memory |
+| `set_project_info` | Describe a project that has no description yet |
 | `list_projects`, `get_project_summary`, `get_project_memories`, `get_dashboard` | Browse |
 | `sync` | Re-read every memory folder now (it also happens on its own) |
 

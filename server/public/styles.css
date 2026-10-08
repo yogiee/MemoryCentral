@@ -736,3 +736,6 @@ details.connect summary, details.block-item summary { cursor: pointer; font-weig
 .table td { padding: 8px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
 .table td.num { font-family: var(--font-mono); text-align: right; }
 .table td .btn + .btn { margin-left: 6px; }
+.check { display: flex; align-items: center; gap: 10px; font-size: 14.5px; cursor: pointer; margin: 6px 0 4px; }
+.check input { accent-color: var(--accent); width: 16px; height: 16px; }
+.notice p { margin: 0 0 8px; }

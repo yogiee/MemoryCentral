@@ -156,6 +156,18 @@ function initSchema(db) {
 
   migrateToChunkedEmbeddings(db);
   migrateToSources(db);
+  migrateMetaSource(db);
+}
+
+// Where a project's description came from, so a guess never overwrites a deliberate
+// value: 'block' (its MemoryCentral block), 'agent' (an AI tool via set_project_info),
+// 'auto' (optional Ollama extraction), 'readme' (fallback), 'legacy' (pre-2026-10-09,
+// from the old always-on extraction — kept until something better arrives).
+function migrateMetaSource(db) {
+  const cols = new Set(db.prepare("SELECT name FROM pragma_table_info('projects')").all().map(c => c.name));
+  if (cols.has('meta_source')) return;
+  db.exec('ALTER TABLE projects ADD COLUMN meta_source TEXT');
+  db.exec("UPDATE projects SET meta_source='legacy' WHERE description != ''");
 }
 
 // Schema v2 (2026-10-09): MemoryCentral stops being a mirror of one harness's folders.

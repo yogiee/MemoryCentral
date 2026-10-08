@@ -142,9 +142,16 @@ Semantic search compares a query vector against the vectors of every memory chun
 
 The models were chosen by measurement on a real corpus. See [embedding-eval-2026-10-09.md](embedding-eval-2026-10-09.md).
 
-### Project metadata: `server/projectBlock.js`
+### Project metadata: `server/projectBlock.js`, `server/extract.js`
 
-A project's name, description and stack come from a short `## MemoryCentral` block in its instructions file. The same block tells the AI tool working in that project to use MemoryCentral. See [project-block.md](project-block.md). No model is called.
+A project's name, description and stack come from, in order:
+
+1. its `## MemoryCentral` block;
+2. an AI tool, via `set_project_info`;
+3. optionally, a local Ollama model (`extract.js`), off by default and turned on in Settings, which only fills gaps;
+4. its README.
+
+`projects.meta_source` records which won, so a guess never overwrites a deliberate value. See [project-block.md](project-block.md).
 
 ### MCP server: `server/index.js`, `server/instructions.js`
 

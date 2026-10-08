@@ -104,3 +104,10 @@ test('find_similar degrades to in-context matching when the embedder is down, sa
 test('until setup is finished, answers tell the user how to finish it', async () => {
   assert.match((await call('list_projects')).text, /setup isn't finished.*node setup\.js/s);
 });
+
+test('set_project_info lets an AI tool describe a project', async () => {
+  const r = await call('set_project_info', { project: 'copilot-service', description: 'Queue workers for billing.', stack: ['node', 'sqs'] });
+  assert.equal(r.isError, false, r.text);
+  assert.match((await call('list_projects')).text, /## copilot-service\nQueue workers for billing\./);
+  assert.match((await call('find_by_stack', { stack: 'sqs' })).text, /copilot-service/);
+});

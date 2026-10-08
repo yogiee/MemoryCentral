@@ -23,6 +23,8 @@ import { connectSnippets } from './connect.js';
 import { suggestBlock, INSTRUCTION_FILES } from './projectBlock.js';
 import { confirmHeldRemovals, adoptSource, adoptOrphan, restoreTombstone, purgeTombstone, deleteMemory } from './store.js';
 import { dataRoot } from './paths.js';
+import { SUGGESTED_EXTRACT_MODEL } from './extract.js';
+import { writeManifest } from './manifest.js';
 
 const SERVER_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -91,6 +93,13 @@ export async function setupStatus(db) {
       options: Object.entries(LOCAL_MODELS).map(([id, s]) => ({ model: id, label: s.label, sizeMB: s.sizeMB })),
     },
     harnesses: harnessInventory(),
+    extract: {
+      available: cfg.provider === 'ollama',
+      enabled: !!getSetting(db, 'extract.enabled'),
+      model: getSetting(db, 'extract.model') || SUGGESTED_EXTRACT_MODEL.model,
+      suggested: SUGGESTED_EXTRACT_MODEL,
+      installed: !!ollama.models?.some(m => m.name === (getSetting(db, 'extract.model') || SUGGESTED_EXTRACT_MODEL.model)),
+    },
     index: {
       projects: db.prepare('SELECT COUNT(*) n FROM projects').get().n,
       memories: db.prepare('SELECT COUNT(*) n FROM memories').get().n,
@@ -122,6 +131,17 @@ export function saveSettings(db, body) {
   setSetting(db, 'embed.provider', provider);
   invalidateConfig();
   return { ok: true, config: configSummary(activeConfig()), pending: countPending(db) };
+}
+
+// Optional project auto-description (extract.js). The model is pulled first, by the
+// page, through streamOllamaPull; turning it off leaves the model installed (removing
+// it is the user's call — `ollama rm`).
+export function saveExtractSettings(db, { enabled, model } = {}) {
+  if (enabled && activeConfig().provider !== 'ollama') return { ok: false, reason: 'auto-description needs Ollama as the search engine' };
+  setSetting(db, 'extract.enabled', enabled ? true : null);
+  if (model) setSetting(db, 'extract.model', model === SUGGESTED_EXTRACT_MODEL.model ? null : model);
+  writeManifest(db);
+  return { ok: true, enabled: !!enabled };
 }
 
 export function completeSetup(db) {

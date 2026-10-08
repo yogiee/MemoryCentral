@@ -304,3 +304,67 @@ test('a memory with no file anywhere is kept until the user adopts or deletes it
   assert.equal(live('app').length, 2);
   assert.equal(db.prepare("SELECT s.kind FROM memories m JOIN sources s ON s.id=m.source_id WHERE m.filename='b.md'").get().kind, 'native');
 });
+
+// ── Project metadata precedence (block > AI tool > auto-extraction > README) ──
+
+function stubExtractor(description, stack = ['node']) {
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    calls.push(JSON.parse(init.body));
+    return Response.json({ message: { content: JSON.stringify({ description, stack }) } });
+  };
+  return calls;
+}
+
+test('auto-description is off by default and never calls a model', async () => {
+  const real = globalThis.fetch;
+  const calls = stubExtractor('guessed');
+  try {
+    claudeProject('app', { 'a.md': 'alpha' });
+    await sync();
+    assert.equal(calls.length, 0);
+  } finally { globalThis.fetch = real; }
+});
+
+test('when turned on it fills gaps only, and re-runs only when memories change', async () => {
+  const real = globalThis.fetch;
+  const calls = stubExtractor('Guessed from memories.', ['node', 'postgres']);
+  try {
+    mods.setSetting(db, 'extract.enabled', true);
+    const { mem } = claudeProject('chats', { 'a.md': 'alpha' });
+    claudeProject('declared', { 'b.md': 'beta' }, '## MemoryCentral\nDescription: Declared.\nStack: go');
+    await sync();
+    const p = n => ({ ...db.prepare('SELECT description, stack, meta_source FROM projects WHERE name=?').get(n) });
+    assert.deepEqual(p('chats'), { description: 'Guessed from memories.', stack: '["node"]', meta_source: 'auto' }, 'out-of-allowlist tags dropped');
+    assert.deepEqual(p('declared'), { description: 'Declared.', stack: '["go"]', meta_source: 'block' }, 'a block is never overridden');
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0].options, { temperature: 0, num_ctx: 4096 });
+    assert.equal(calls[0].think, false);
+
+    await sync();
+    assert.equal(calls.length, 1, 'unchanged memories are not re-described');
+    writeFileSync(join(mem, 'a.md'), 'alpha, edited');
+    await sync();
+    assert.equal(calls.length, 2);
+  } finally { globalThis.fetch = real; }
+});
+
+test('a description set by an AI tool beats auto-extraction; a block beats both', async () => {
+  const real = globalThis.fetch;
+  const calls = stubExtractor('guessed');
+  try {
+    mods.setSetting(db, 'extract.enabled', true);
+    const { repo } = claudeProject('app', { 'a.md': 'alpha' });
+    const r = mods.setProjectInfo(db, { project: 'app', description: 'Set by the agent.', stack: ['Swift', 'not a tag!'] });
+    assert.ok(r.ok);
+    await sync();
+    let p = { ...db.prepare('SELECT description, stack, meta_source FROM projects WHERE name=?').get('app') };
+    assert.deepEqual(p, { description: 'Set by the agent.', stack: '["swift"]', meta_source: 'agent' });
+    assert.equal(calls.length, 0, 'no extraction for a project an AI tool described');
+
+    writeFileSync(join(repo, 'AGENTS.md'), '## MemoryCentral\nDescription: From the block.\n');
+    await sync();
+    p = { ...db.prepare('SELECT description, meta_source FROM projects WHERE name=?').get('app') };
+    assert.deepEqual(p, { description: 'From the block.', meta_source: 'block' });
+  } finally { globalThis.fetch = real; }
+});

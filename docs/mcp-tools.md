@@ -39,6 +39,9 @@ Creates or updates a memory.
 
 What's worth saving: what a future session couldn't work out from the code or git history. That means the reason behind a decision, a fix's root cause, a constraint from outside the code, or a user preference. Routine changes are not worth saving.
 
+### `set_project_info(project, description?, stack?, project_path?)`
+Describes a project: one sentence and lowercase stack tags. AI tools are asked to use it when the project they're working in has no description. A [MemoryCentral block](project-block.md) in the repository takes precedence; the tool's reply says so when one exists.
+
 ### `delete_memory(project, filename)`
 Permanently removes a memory that is wrong or no longer true, along with its file. Use it only when the user wants the memory gone. To correct a memory, `save_memory` the same filename instead.
 

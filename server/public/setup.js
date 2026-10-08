@@ -406,6 +406,8 @@ async function renderSettingsView(container) {
         (status.index.pending ? status.index.pending + ' waiting for semantic indexing' : 'fully indexed'))),
     !c.runnable ? notice('error', 'The configured model can\'t run here. Choose another with "Change…".') : null));
 
+  page.appendChild(extractPanel(status, function() { renderSettingsView(container); }));
+
   page.appendChild(el('section', { class: 'ov-panel' },
     el('div', { class: 'panel-head' }, el('div', { class: 'panel-title' }, 'Apps and projects')),
     el('div', { class: 'row' },
@@ -471,4 +473,62 @@ async function renderSettingsView(container) {
             el('button', { class: 'btn btn-ghost btn-sm', onclick: async function() { var r = await apiPost('/api/tombstones/' + t.id + '/purge'); if (r.ok) renderSettingsView(container); } }, 'Delete forever')));
       })))
       : el('p', { class: 'muted' }, 'Nothing deleted recently.')));
+}
+
+// Project descriptions: where they come from, and the optional Ollama auto-description.
+function extractPanel(status, refresh) {
+  var x = status.extract;
+  var panel = el('section', { class: 'ov-panel' },
+    el('div', { class: 'panel-head' }, el('div', { class: 'panel-title' }, 'Project descriptions')),
+    el('p', { class: 'muted' }, 'A project\'s name, description and stack come from, in order: its MemoryCentral block, then what an AI tool working in it set (set_project_info), then — if you turn it on — an automatic description by a local model, then its README.'));
+  if (!x.available) {
+    panel.appendChild(el('p', { class: 'muted small' }, 'Automatic descriptions need Ollama as the search engine.'));
+    return panel;
+  }
+  var box = el('input', { type: 'checkbox', checked: x.enabled ? true : null });
+  var detail = el('div', {});
+  panel.appendChild(el('label', { class: 'check' }, box, el('span', {}, 'Describe projects automatically with Ollama'),
+    x.enabled ? el('span', { class: 'chip chip-ok' }, x.model) : null));
+  panel.appendChild(detail);
+
+  box.addEventListener('change', async function() {
+    detail.innerHTML = '';
+    if (!box.checked) {
+      var r = await apiPost('/api/settings/extract', { enabled: false });
+      if (r.ok) detail.appendChild(notice('ok', 'Turned off. Existing descriptions stay. The model stays installed — remove it with "ollama rm ' + x.model + '" if you no longer want it.'));
+      return;
+    }
+    var bar = progressBar(), out = el('div', {});
+    var go = el('button', { class: 'btn btn-primary', onclick: async function() {
+      go.disabled = true; cancel.disabled = true;
+      try {
+        if (!x.installed) {
+          var last = await streamPost('/api/ollama/pull', { host: status.config.host, model: x.model }, function(ev) {
+            if (ev.total) bar.set(ev.completed / ev.total, ev.status + ' — ' + fmtMB(ev.completed) + ' of ' + fmtMB(ev.total));
+            else if (ev.status) bar.set(0, ev.status);
+          });
+          if (last && last.error) throw new Error(last.error);
+        }
+        var r = await apiPost('/api/settings/extract', { enabled: true, model: x.model });
+        if (!r.ok) throw new Error(r.reason);
+        bar.set(1, 'Describing projects…');
+        await apiPost('/api/sync');
+        refresh();
+      } catch (e) {
+        out.appendChild(notice('error', e.message));
+        go.disabled = false; cancel.disabled = false;
+      }
+    } }, x.installed ? 'Turn on' : 'Download ' + fmtMB(x.suggested.sizeMB * 1e6) + ' and turn on');
+    var cancel = el('button', { class: 'btn btn-ghost', onclick: function() { box.checked = false; detail.innerHTML = ''; } }, 'Cancel');
+    detail.appendChild(el('div', { class: 'notice notice-ok' },
+      el('p', {}, 'When a project has no MemoryCentral block and no description set by an AI tool, a small local model (' + x.suggested.label + ', ' + x.model + ') reads the start of its memories and writes a one-sentence description and stack tags. Useful for apps whose memory isn\'t organised around repositories.'),
+      el('ul', { class: 'choice-points' },
+        el('li', {}, 'Runs locally in Ollama after a sync, only for projects whose memories changed — about 1–3 seconds each.'),
+        el('li', {}, x.installed ? 'The model is already installed.' : 'Downloads the model once: about ' + fmtMB(x.suggested.sizeMB * 1e6) + '.'),
+        el('li', {}, 'Never overrides a project block or a description an AI tool set. Turn it off any time.')),
+      el('div', { class: 'row' }, go, cancel)));
+    detail.appendChild(bar);
+    detail.appendChild(out);
+  });
+  return panel;
 }

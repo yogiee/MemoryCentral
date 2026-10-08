@@ -15,6 +15,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { activeConfig } from './embed.js';
 import { recommendedOllamaModel } from './models.js';
+import { extractConfig } from './extract.js';
 
 const CONSUMER      = 'memoryCentral';
 const MANIFEST_DIR  = join(homedir(), '.config', 'ollama-consumers');
@@ -40,7 +41,7 @@ function resolveSource() {
   }
 }
 
-export function buildManifest(generatedISO) {
+export function buildManifest(generatedISO, { extractModel = null } = {}) {
   // assignments: role → { model, capability, basis?, tier? }. capability drives per-capability
   // drop logic; basis names the exact list when a capability has more than one (embedding does).
   // On the built-in (Node.js) engine MemoryCentral uses no Ollama model at all, and
@@ -54,6 +55,9 @@ export function buildManifest(generatedISO) {
       basis: 'embedding_long',
       tier: 'primary',
     },
+    // Optional project auto-description, only while the user has it turned on. A
+    // deliberate user pin, not leaderboard-selected: protected, never drop-evaluated.
+    ...(extractModel && { extract: { model: extractModel, capability: 'manual', tier: 'optional' } }),
   };
 
   return {
@@ -86,19 +90,24 @@ export function buildManifest(generatedISO) {
              'embeddinggemma:300m. granite-embedding:30m fails us (512-tok window).',
       // Kept so BenchLLAMA's history reads right: granite4.2:3b leaving models_in_use is
       // deliberate, not drift — it may now be dropped from the fleet as far as we care.
-      extract: 'Removed 2026-10-09. Project name, description and stack now come from a ' +
-               'declarative "## MemoryCentral" block in each project\'s instructions file ' +
-               '(server/projectBlock.js); no model is called. granite4.2:3b (the last extract ' +
-               'pin) is no longer used by MemoryCentral.',
+      extract: 'Optional since 2026-10-09 (off by default; the user turns it on in Settings). ' +
+               'Project metadata comes first from each project\'s "## MemoryCentral" block, then from ' +
+               'AI tools via set_project_info; extraction only fills gaps. When off, no extract model ' +
+               'is in use — its absence from models_in_use is deliberate.',
     },
   };
 }
 
 // Writes the manifest. Returns the path on success, null on failure (never throws).
-export function writeManifest() {
+// db (optional) lets the manifest include the opt-in extraction model when it is on.
+// MC_MANIFEST=0 turns it off (tests, throwaway installs) — the manifest is one file
+// per user, and a scratch install must not overwrite the real one.
+export function writeManifest(db = null) {
+  if (process.env.MC_MANIFEST === '0') return null;
   try {
     mkdirSync(MANIFEST_DIR, { recursive: true });
-    writeFileSync(MANIFEST_PATH, JSON.stringify(buildManifest(new Date().toISOString()), null, 2) + '\n');
+    const extractModel = db ? (({ enabled, model }) => (enabled ? model : null))(extractConfig(db)) : null;
+    writeFileSync(MANIFEST_PATH, JSON.stringify(buildManifest(new Date().toISOString(), { extractModel }), null, 2) + '\n');
     return MANIFEST_PATH;
   } catch (err) {
     process.stderr.write(`manifest: skipped (${err.message})\n`);

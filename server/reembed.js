@@ -68,11 +68,11 @@ for (const r of targets) {
 
 // Report any remaining model heterogeneity so the operator knows the state.
 const breakdown = db.prepare('SELECT model, COUNT(DISTINCT memory_id) AS n FROM embeddings GROUP BY model ORDER BY n DESC').all();
-db.close();
 
 // A re-embed is the moment the active embedding assignment changes — refresh the
 // consumer manifest so BenchLLAMA sees the new model in our working set.
-const manifestPath = writeManifest();
+const manifestPath = writeManifest(db);
+db.close();
 if (manifestPath) process.stdout.write(`Consumer manifest updated: ${manifestPath}\n`);
 
 process.stdout.write(`\nDone: ${done} memorie(s) re-embedded as ${chunks} chunk(s), ${failed} failed.\n`);
