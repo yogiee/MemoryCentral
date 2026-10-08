@@ -1,6 +1,46 @@
 import { existsSync } from 'fs';
-import { join, basename } from 'path';
+import { join, basename, dirname, resolve } from 'path';
 import { homedir } from 'os';
+import { fileURLToPath } from 'url';
+
+// ── Where MemoryCentral keeps its own data ──────────────────────────────────
+//
+// Everything MemoryCentral owns lives under one per-user data root, independent
+// of where the repo is cloned:
+//
+//   ~/.memorycentral/
+//     memorycentral.db            index: memories, FTS, vectors, settings, sources
+//     projects/<dir>/memory/*.md  memories MemoryCentral owns (saved through MCP)
+//     projects/<dir>/project.json the project's real name (dir names are sanitised)
+//     generated/                  snapshots + DASHBOARD.md, rebuilt every sync
+//     backups/                    safety copies taken before migrations
+//
+// Harness memories (Claude Code's ~/.claude/projects/*/memory today) are NOT
+// copied here: they are sources, read in place and fully ingested into the DB.
+//
+// Every path is a function read at call time, so MEMORYCENTRAL_HOME and
+// MC_CLAUDE_PROJECTS set by a test (or a second install) take effect without
+// reloading modules.
+export const dataRoot = () => resolve(process.env.MEMORYCENTRAL_HOME || join(homedir(), '.memorycentral'));
+export const dbPath = () => join(dataRoot(), 'memorycentral.db');
+export const nativeRoot = () => join(dataRoot(), 'projects');
+export const generatedDir = () => join(dataRoot(), 'generated');
+export const backupsDir = () => join(dataRoot(), 'backups');
+export const claudeProjectsRoot = () => resolve(process.env.MC_CLAUDE_PROJECTS || join(homedir(), '.claude', 'projects'));
+
+// Before 2026-10-09 the DB lived inside the clone. openDb() moves it once.
+export const LEGACY_DB_PATH = join(dirname(fileURLToPath(import.meta.url)), '..', 'stats', 'knowledge.db');
+
+// A project name made safe as a single directory name on every platform. Windows
+// rejects <>:"/\|?* and control characters, trailing dots/spaces, and a set of
+// reserved device names (CON, NUL, COM1…) regardless of extension. The real name
+// is kept in project.json beside it, so this mapping never has to be reversed.
+export function safeDirName(name) {
+  let s = String(name).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').replace(/[. ]+$/, '').trim();
+  if (!s || s === '.' || s === '..') s = '_';
+  if (/^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i.test(s)) s = `_${s}`;
+  return s.slice(0, 120);
+}
 
 // Decode a Claude-encoded directory name back to { name, path }.
 //

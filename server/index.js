@@ -1,24 +1,17 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { spawn } from 'child_process';
-import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { homedir } from 'os';
-import { openDb } from './db.js';
-import { embed, cosineSimilarity, activeModel } from './embed.js';
-import { countPending, embedMemory, startBackfillLoop } from './backlog.js';
-import { embedHash } from './chunk.js';
-import { memoryType, extractTitle } from './meta.js';
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
+import { openDb, ftsQuery } from './db.js';
+import { embed, cosineSimilarity } from './embed.js';
+import { countPending, startBackfillLoop } from './backlog.js';
+import { syncAll, formatSyncStats } from './ingest.js';
+import { saveMemory, deleteMemory } from './store.js';
+import { generatedDir } from './paths.js';
 import { start as startDashboard } from './dashboard.js';
 import { writeManifest } from './manifest.js';
-
-const __dirname    = dirname(fileURLToPath(import.meta.url));
-const REPO         = join(__dirname, '..');
-const DASHBOARD    = join(REPO, 'dashboard', 'DASHBOARD.md');
-const SYNC_SCRIPT  = join(REPO, 'sync.js');
-const HOME         = homedir();
+import { INSTRUCTIONS, USAGE_PROMPT } from './instructions.js';
 
 const db = openDb();
 
@@ -26,7 +19,10 @@ const db = openDb();
 // Tools
 // ---------------------------------------------------------------------------
 
-const server = new McpServer({ name: 'memoryCentral', version: '2.0.0' });
+// `instructions` reaches every client that supports MCP server instructions (Claude
+// Code, Codex, VS Code), so the when-to-use guidance no longer depends on a
+// harness-specific config file.
+const server = new McpServer({ name: 'memoryCentral', version: '3.0.0' }, { instructions: INSTRUCTIONS });
 
 server.tool(
   'list_projects',
@@ -122,7 +118,7 @@ server.tool(
       JOIN projects p ON p.id = m.project_id
       WHERE memories_fts MATCH ?
     `;
-    const params = [query];
+    const params = [ftsQuery(query)];
     if (project) { sql += ' AND p.name=?'; params.push(project); }
     sql += ' ORDER BY fts.rank LIMIT 20';
 
@@ -251,66 +247,37 @@ server.tool(
 
 server.tool(
   'save_memory',
-  'Write a memory entry to a project — saves to both the filesystem and the knowledge DB with embeddings. Use mid-session to persist discoveries, decisions, or context without waiting for the next sync.',
+  'Save a memory (a decision, fix, gotcha or reference) to a project so any future session, in any AI tool, can find it. ' +
+  'Creates the project if it is new. Re-saving a filename updates that memory in place.',
   {
-    project:  z.string().describe('Exact project name as shown in list_projects (e.g. "IPMSGX")'),
-    filename: z.string().describe('Memory filename e.g. "feedback_auth.md", "project_decisions.md"'),
-    content:  z.string().describe('Full markdown content — include frontmatter if applicable'),
+    project:      z.string().describe("Project name: the `Project:` line of the repo's MemoryCentral block if it has one, else the repo folder name"),
+    filename:     z.string().describe('Memory filename, e.g. "feedback_auth.md" or "project_decisions.md" (a plain .md name, no folders)'),
+    content:      z.string().describe('Full markdown content; frontmatter with name/description/type is recommended'),
+    project_path: z.string().optional().describe("Absolute path of the project's repository, if known (lets MemoryCentral read its MemoryCentral block)"),
   },
-  async ({ project, filename, content }) => {
-    const p = db.prepare('SELECT * FROM projects WHERE name=?').get(project);
-    if (!p) {
-      return {
-        content: [{ type: 'text', text: `Project "${project}" not found. Run the "sync" tool first to register it, then retry.` }],
-        isError: true,
-      };
-    }
+  async ({ project, filename, content, project_path }) => {
+    const r = await saveMemory(db, { project, filename, content, projectPath: project_path ?? null });
+    if (!r.ok) return { content: [{ type: 'text', text: `Not saved: ${r.reason}` }], isError: true };
+    const action = r.created ? 'Created' : r.changed ? 'Updated' : 'Already up to date:';
+    // Name the actual embedding failure, never a generic "unavailable" (2026-08-28).
+    const note = r.embedded ? '' :
+      `\n⚠ Embedding pending — ${r.reason}\n  Keyword search works now; semantic search picks it up after auto-backfill (or save again to retry).`;
+    return { content: [{ type: 'text', text: `${action} "${filename}" in ${project}.\nWritten to: ${r.path}${note}` }] };
+  },
+);
 
-    const memDir = join(HOME, '.claude', 'projects', p.encoded_path, 'memory');
-    mkdirSync(memDir, { recursive: true });
-    writeFileSync(join(memDir, filename), content);
-
-    const type     = memoryType(filename, content);
-    const title    = extractTitle(content, filename);
-    const hash     = embedHash(title, content);
-    const now      = new Date().toISOString();
-    const existing = db.prepare('SELECT id, content FROM memories WHERE project_id=? AND filename=?').get(p.id, filename);
-
-    let memId, action;
-    if (!existing) {
-      const { id } = db.prepare(
-        'INSERT INTO memories (project_id, filename, memory_type, title, content, embed_hash, synced_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id'
-      ).get(p.id, filename, type, title, content, hash, now);
-      db.prepare('INSERT INTO memories_fts (rowid, title, content, project_name, memory_type) VALUES (?, ?, ?, ?, ?)').run(id, title, content, project, type);
-      memId = id; action = 'Created';
-    } else if (existing.content !== content) {
-      db.prepare('UPDATE memories SET memory_type=?, title=?, content=?, embed_hash=?, synced_at=? WHERE id=?').run(type, title, content, hash, now, existing.id);
-      db.prepare('DELETE FROM memories_fts WHERE rowid=?').run(existing.id);
-      db.prepare('INSERT INTO memories_fts (rowid, title, content, project_name, memory_type) VALUES (?, ?, ?, ?, ?)').run(existing.id, title, content, project, type);
-      memId = existing.id; action = 'Updated';
-    } else {
-      // Byte-identical content. Re-saving is the obvious retry after a save that
-      // reported "embedding pending", so check the vectors before short-circuiting
-      // — the old early return made that retry impossible and a memory could sit
-      // unembedded indefinitely (found 2026-08-28).
-      const current = db.prepare('SELECT COUNT(*) AS n FROM embeddings WHERE memory_id=? AND model=? AND embed_hash=?')
-        .get(existing.id, activeModel(), hash).n;
-      if (current) {
-        return { content: [{ type: 'text', text: `"${filename}" in ${project} is already up-to-date.` }] };
-      }
-      memId = existing.id; action = 'Re-embedded';
-    }
-
-    const embedded = await embedMemory(db, { id: memId, title, content, embed_hash: hash });
-
-    // Name the actual failure. This message used to read "provider unavailable"
-    // for every cause, and said exactly that while Ollama was healthy — which is
-    // why nobody chased it and 14 memories drifted (2026-08-28).
-    const embedNote = embedded.ok
-      ? ''
-      : `\n⚠ Embedding pending — ${embedded.reason}: ${embedded.message}\n` +
-        `  Keyword search works now; semantic search picks it up after auto-backfill (or save again to retry).`;
-    return { content: [{ type: 'text', text: `${action} "${filename}" in ${project}.\nWritten to: ${join(memDir, filename)}${embedNote}` }] };
+server.tool(
+  'delete_memory',
+  'Permanently delete a memory that is wrong or no longer true (stale decision, changed spec). Removes its file and its index entry. ' +
+  'Use only when the user wants it gone; to correct a memory, save_memory the same filename instead.',
+  {
+    project:  z.string().describe('Exact project name as shown in list_projects'),
+    filename: z.string().describe('The memory filename'),
+  },
+  async ({ project, filename }) => {
+    const r = deleteMemory(db, { project, filename });
+    if (!r.ok) return { content: [{ type: 'text', text: `Not deleted: ${r.reason}` }], isError: true };
+    return { content: [{ type: 'text', text: `Deleted "${filename}" from ${project}${r.fileRemoved ? ' (file removed)' : ''}.` }] };
   },
 );
 
@@ -318,54 +285,24 @@ server.tool(
   'get_dashboard',
   'Cross-project dashboard grouped by tech stack.',
   async () => {
-    if (!existsSync(DASHBOARD)) {
-      return { content: [{ type: 'text', text: 'Dashboard not found — run node sync.js first.' }], isError: true };
-    }
-    return { content: [{ type: 'text', text: readFileSync(DASHBOARD, 'utf8') }] };
+    const file = join(generatedDir(), 'DASHBOARD.md');
+    if (!existsSync(file)) return { content: [{ type: 'text', text: 'No dashboard yet — run the sync tool first.' }], isError: true };
+    return { content: [{ type: 'text', text: readFileSync(file, 'utf8') }] };
   },
 );
 
 server.tool(
   'sync',
-  'Trigger a memory sync from all Claude project sessions without committing to git.',
-  async () => new Promise(resolve => {
-    const proc = spawn(process.execPath, [SYNC_SCRIPT], { stdio: ['ignore', 'pipe', 'pipe'] });
-    let out = '';
-    proc.stdout.on('data', d => { out += d; });
-    proc.stderr.on('data', d => { out += d; });
-    proc.on('close', code => resolve({
-      content: [{ type: 'text', text: code === 0 ? `Sync complete:\n\n${out}` : `Sync failed (exit ${code}):\n\n${out}` }],
-      isError: code !== 0,
-    }));
-  }),
+  'Re-read every memory source now (AI tools\' memory folders and MemoryCentral\'s own store). The server also does this on its own every few minutes.',
+  async () => {
+    const stats = await syncAll(db);
+    return { content: [{ type: 'text', text: formatSyncStats(stats) }] };
+  },
 );
 
 // ---------------------------------------------------------------------------
 // Prompts — usage guidance for MCP hosts
 // ---------------------------------------------------------------------------
-
-const USAGE_INSTRUCTIONS = `\
-## MemoryCentral — cross-project knowledge
-
-You have access to a persistent knowledge bank of decisions, solutions, and discoveries \
-from ALL of the user's projects — not just this one.
-
-**When to use:**
-- \`memoryCentral__find_similar(description)\` — Semantic search. Use proactively when: \
-the user asks how something was done before ("how did we do X?"), you're about to \
-implement a known pattern (auth, scroll, caching, navigation, persistence, networking), \
-or you suspect a prior solution exists in another project.
-- \`memoryCentral__search_memories(query, project?)\` — Keyword search. Use for specific \
-named things: a library name, a tool, an architectural decision.
-- \`memoryCentral__get_project_memories(project)\` — Full memory dump for one project. \
-Use when the user explicitly asks about a specific project's history.
-
-**Conventions:**
-- Check MemoryCentral before solving a problem from scratch. If a prior solution \
-surfaces, verify it's still valid, then apply it.
-- Don't announce you checked if nothing relevant comes back — just proceed normally.
-- \`memoryCentral__save_memory\` persists knowledge across Claude sessions; use \
-\`save_memory\` (the builtin tool) for project-local notes instead.`;
 
 server.prompt(
   'usage_instructions',
@@ -373,7 +310,7 @@ server.prompt(
   async () => ({
     messages: [{
       role: 'user',
-      content: { type: 'text', text: USAGE_INSTRUCTIONS },
+      content: { type: 'text', text: USAGE_PROMPT },
     }],
   }),
 );
@@ -384,15 +321,30 @@ server.prompt(
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
-startDashboard(9980);
+startDashboard(Number(process.env.MC_DASHBOARD_PORT) || 9980);
 
 // Refresh the consumer manifest for BenchLLAMA every session launch (Ollama-independent,
 // best-effort). See server/manifest.js + docs/consumer-manifest.md.
-writeManifest();
+if (process.env.MC_MANIFEST !== '0') writeManifest();
+
+// The server keeps the index current itself, so no harness needs a hook: a sync
+// shortly after boot, then every SYNC_INTERVAL_MS. Every harness runs its own
+// server; the sync lease (settings.js) makes all but one of them skip.
+const SYNC_INTERVAL_MS = Number(process.env.MC_SYNC_INTERVAL_MS) || 5 * 60_000;
+async function backgroundSync() {
+  try {
+    const s = await syncAll(db);
+    if (!s.skipped && (s.added || s.updated || s.tombstoned || s.held)) console.error(`memoryCentral: ${formatSyncStats(s).split('\n')[0]}`);
+  } catch (err) {
+    console.error(`memoryCentral: background sync failed — ${err?.stack || err}`);
+  }
+}
+setTimeout(backgroundSync, 2_000).unref();
+setInterval(backgroundSync, SYNC_INTERVAL_MS).unref();
 
 // Backfill embeddings left pending by provider outages. Runs for the life of the
 // process rather than once at boot: the provider is often not ready at launch,
 // and a reconnect is just another boot into the same window (defect 2, 2026-08-28).
 startBackfillLoop(db, msg => console.error(`memoryCentral: ${msg}`));
 
-console.error('MemoryCentral MCP server v2 running');
+console.error('MemoryCentral MCP server v3 running');

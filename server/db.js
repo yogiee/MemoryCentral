@@ -1,21 +1,82 @@
 import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { mkdirSync, existsSync, linkSync, unlinkSync, renameSync } from 'fs';
+import { dirname } from 'path';
+import { createHash } from 'crypto';
 import { embedHash, CHUNK_CHARS } from './chunk.js';
 import { EMBED_MAX_CHARS } from './embed.js';
+import { dbPath, LEGACY_DB_PATH } from './paths.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-export const DB_PATH = join(__dirname, '..', 'stats', 'knowledge.db');
-
-export function openDb() {
-  mkdirSync(join(__dirname, '..', 'stats'), { recursive: true });
-  const db = new DatabaseSync(DB_PATH);
+// Opens (creating if needed) the index DB. The path defaults to the data root's
+// memorycentral.db; tests pass their own or set MEMORYCENTRAL_HOME.
+export function openDb(path = dbPath()) {
+  mkdirSync(dirname(path), { recursive: true });
+  if (!process.env.MEMORYCENTRAL_HOME && path === dbPath() && existsSync(LEGACY_DB_PATH) && isEmptyIndex(path)) {
+    moveLegacyDb(path);
+  }
+  const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode=WAL');
   db.exec('PRAGMA busy_timeout=5000');
   db.exec('PRAGMA foreign_keys=ON');
   initSchema(db);
   return db;
+}
+
+// Turns what a person (or an agent) types into a safe FTS5 query. Raw input is FTS5
+// syntax: `Cache-Control` parses as a column filter and errors, `don't` breaks on
+// the quote. Each plain token becomes a quoted phrase (FTS still tokenises inside
+// it, so `Cache-Control` matches "cache control"); deliberate syntax is kept —
+// quoted phrases, the AND/OR/NOT/NEAR operators, and prefix terms like `embed*`.
+export function ftsQuery(input) {
+  const tokens = String(input).match(/"[^"]*"|\S+/g) || [];
+  return tokens.map(t => {
+    if (/^".*"$/.test(t) || /^(AND|OR|NOT|NEAR)$/.test(t) || /^[\p{L}\p{N}_]+\*$/u.test(t)) return t;
+    return `"${t.replace(/"/g, '""')}"`;
+  }).join(' ');
+}
+
+export const contentHash = content => createHash('sha256').update(String(content)).digest('hex').slice(0, 32);
+
+// One-time move of the pre-2026-10-09 DB from <clone>/stats/knowledge.db into the
+// data root. Only for the DEFAULT root: a custom MEMORYCENTRAL_HOME (tests, a second
+// install) starts empty instead of silently cloning someone's real index.
+//
+// VACUUM INTO gives a consistent snapshot even while an old-code MCP server still
+// has the legacy file open (it reads through the WAL). The copy lands in a temp
+// file and is hard-linked into place, which fails rather than overwrites if another
+// process — every harness starts its own server — won the race. The legacy file is
+// left untouched as the backup.
+// True when there is no index at `path`, or one with no projects in it. An empty
+// index must never shadow a populated legacy one: anything that opened the default
+// path before the move (a stray script, a half-finished first run) would otherwise
+// leave every memory looking gone.
+function isEmptyIndex(path) {
+  if (!existsSync(path)) return true;
+  try {
+    const db = new DatabaseSync(path);
+    const has = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='projects'").get();
+    const n = has ? db.prepare('SELECT COUNT(*) AS n FROM projects').get().n : 0;
+    db.close();
+    return n === 0;
+  } catch {
+    return false; // unreadable: leave it alone rather than replace it
+  }
+}
+
+function moveLegacyDb(path) {
+  const tmp = `${path}.migrating-${process.pid}`;
+  try {
+    const legacy = new DatabaseSync(LEGACY_DB_PATH);
+    legacy.exec('PRAGMA busy_timeout=5000');
+    legacy.exec(`VACUUM INTO '${tmp.replace(/'/g, "''")}'`);
+    legacy.close();
+    // An empty index in the way is set aside (never deleted) before the link.
+    if (existsSync(path)) renameSync(path, `${path}.empty-${Date.now()}`);
+    for (const ext of ['-wal', '-shm']) if (existsSync(path + ext)) renameSync(path + ext, `${path}${ext}.empty-${Date.now()}`);
+    try { linkSync(tmp, path); } catch (err) { if (err.code !== 'EEXIST') throw err; }
+    process.stderr.write(`memoryCentral: moved the index from ${LEGACY_DB_PATH} to ${path} (the old file is kept as a backup)\n`);
+  } finally {
+    try { unlinkSync(tmp); } catch {}
+  }
 }
 
 function initSchema(db) {
@@ -85,6 +146,81 @@ function initSchema(db) {
   try { db.exec("ALTER TABLE memories ADD COLUMN embed_hash TEXT DEFAULT ''"); } catch {}
 
   migrateToChunkedEmbeddings(db);
+  migrateToSources(db);
+}
+
+// Schema v2 (2026-10-09): MemoryCentral stops being a mirror of one harness's folders.
+//
+//   settings           shared configuration — every process (each harness's MCP
+//                      server, the dashboard, sync) reads the same values
+//   sources            where a project's memory files come from: a harness folder
+//                      read in place ('claude'), MemoryCentral's own store
+//                      ('native'), or any folder of markdown ('dir')
+//   memories.source_id which source owns the file; NULL = no source has claimed it
+//                      (its file is gone or was never found) — kept, never deleted
+//   memory_tombstones  memories whose file was deliberately removed; hidden from
+//                      every query because they are no longer in `memories`,
+//                      restorable until purged
+//
+// Rows are not assigned to sources here: the first sync claims each one when it
+// finds the file. That keeps this migration free of filesystem access, and a row
+// whose file is never found simply stays an orphan rather than being guessed at.
+function migrateToSources(db) {
+  if (db.prepare('PRAGMA user_version').get().user_version >= 2) return;
+  db.exec('BEGIN');
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key        TEXT PRIMARY KEY,
+        value      TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS sources (
+        id            INTEGER PRIMARY KEY,
+        project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        kind          TEXT    NOT NULL,
+        root          TEXT    NOT NULL,
+        status        TEXT    NOT NULL DEFAULT 'ok',
+        last_scan_at  TEXT,
+        last_ok_at    TEXT,
+        missing_since TEXT,
+        note          TEXT,
+        UNIQUE(kind, root)
+      );
+
+      CREATE TABLE IF NOT EXISTS memory_tombstones (
+        id           INTEGER PRIMARY KEY,
+        project_id   INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        source_id    INTEGER,
+        filename     TEXT    NOT NULL,
+        title        TEXT    DEFAULT '',
+        memory_type  TEXT    DEFAULT 'general',
+        content      TEXT    NOT NULL,
+        content_hash TEXT    NOT NULL,
+        deleted_at   TEXT    NOT NULL,
+        reason       TEXT    NOT NULL
+      );
+    `);
+    const cols = new Set(db.prepare("SELECT name FROM pragma_table_info('memories')").all().map(c => c.name));
+    if (!cols.has('source_id')) db.exec('ALTER TABLE memories ADD COLUMN source_id INTEGER REFERENCES sources(id) ON DELETE SET NULL');
+    if (!cols.has('content_hash')) db.exec("ALTER TABLE memories ADD COLUMN content_hash TEXT DEFAULT ''");
+    const pcols = new Set(db.prepare("SELECT name FROM pragma_table_info('projects')").all().map(c => c.name));
+    if (!pcols.has('repo_path')) db.exec('ALTER TABLE projects ADD COLUMN repo_path TEXT');
+    // Which instructions file carried the project's MemoryCentral block (NULL = none).
+    if (!pcols.has('meta_file')) db.exec('ALTER TABLE projects ADD COLUMN meta_file TEXT');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_memories_source ON memories(source_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_memories_content_hash ON memories(content_hash)');
+
+    const setHash = db.prepare('UPDATE memories SET content_hash=? WHERE id=?');
+    for (const m of db.prepare('SELECT id, content FROM memories').all()) setHash.run(contentHash(m.content), m.id);
+
+    db.exec('PRAGMA user_version = 2');
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
 }
 
 // Migration for DBs created before 2026-08-28: one vector per memory -> one per

@@ -5,7 +5,7 @@ import { readFileSync, existsSync } from 'fs';
 import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
-import { openDb } from './db.js';
+import { openDb, ftsQuery } from './db.js';
 import { EMBED_PROVIDER, activeModel } from './embed.js';
 import { countPending } from './backlog.js';
 
@@ -167,13 +167,15 @@ function searchMemories(db, q) {
     return db.prepare(`
       SELECT m.id, m.filename, m.memory_type, m.title, m.synced_at,
              p.name AS project_name,
-             snippet(memories_fts, 2, '<mark>', '</mark>', '…', 30) AS excerpt
+             -- Column 1 is content (0 title, 2 project_name, 3 memory_type). It read 2,
+             -- so every search excerpt showed the project name until 2026-10-09.
+             snippet(memories_fts, 1, '<mark>', '</mark>', '…', 30) AS excerpt
       FROM memories_fts fts
       JOIN memories m ON m.id = fts.rowid
       JOIN projects p ON p.id = m.project_id
       WHERE memories_fts MATCH ?
       ORDER BY fts.rank LIMIT 30
-    `).all(q);
+    `).all(ftsQuery(q));
   } catch { return []; }
 }
 
