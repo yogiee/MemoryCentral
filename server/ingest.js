@@ -26,7 +26,7 @@ import { memoryType, extractTitle } from './meta.js';
 import { ADAPTERS, scanSource } from './sources.js';
 import { readProjectMeta, fallbackDescription } from './projectBlock.js';
 import { getSetting, acquireLease, releaseLease, importRcOnce } from './settings.js';
-import { extractConfig, extractProjectMeta } from './extract.js';
+import { extractConfig, extractProjectMeta, projectDigest } from './extract.js';
 import { createHash } from 'crypto';
 import { drainPending, countPending, embedMemory } from './backlog.js';
 import { generatedDir, safeDirName } from './paths.js';
@@ -199,8 +199,8 @@ async function refreshProjectMeta(db, project, extract) {
 
   const wantsAuto = extract.enabled && source !== 'block' && source !== 'agent';
   if (wantsAuto) {
-    const memories = db.prepare('SELECT title, content FROM memories WHERE project_id=? ORDER BY synced_at DESC').all(project.id);
-    const corpus = memories.map(m => `${m.title}\n${m.content}`).join('\n\n');
+    const memories = db.prepare('SELECT title, memory_type, content FROM memories WHERE project_id=? ORDER BY filename').all(project.id);
+    const corpus = memories.length ? projectDigest(project.name, memories, project.repo_path ? fallbackDescription(project.repo_path) : null) : '';
     const hash = createHash('sha256').update(corpus).digest('hex').slice(0, 16);
     if (corpus && (hash !== project.meta_hash || source !== 'auto')) {
       const meta = await extractProjectMeta(corpus, extract);
@@ -213,7 +213,9 @@ async function refreshProjectMeta(db, project, extract) {
     }
   }
 
-  if (!description && project.repo_path) {
+  // README-derived text is cheap to recompute, so it is refreshed every sync rather
+  // than frozen at whatever an earlier version of the fallback produced.
+  if ((!description || source === 'readme') && project.repo_path) {
     description = fallbackDescription(project.repo_path) || '';
     source = description ? 'readme' : null;
   }

@@ -48,6 +48,28 @@ export function extractConfig(db) {
   return { enabled, host: cfg.host, model: process.env.EXTRACT_MODEL || getSetting(db, 'extract.model') || SUGGESTED_EXTRACT_MODEL.model };
 }
 
+// What the model reads: an overview of the whole project, not raw note text. Fed the
+// first 3,000 characters of the memories themselves, the model described whichever
+// note happened to come first ("A feedback note about browsermcp…", measured on 27
+// real projects, 2026-10-09). The project's name, its README opening and one line per
+// memory — title and frontmatter description, project notes first — fit far more of
+// the project into the same budget.
+const TYPE_ORDER = { project: 0, reference: 1, user: 2, feedback: 3, general: 4 };
+
+export function projectDigest(name, memories, readme = null) {
+  const lines = [`Project name: ${name}`];
+  if (readme) lines.push(`README: ${readme}`);
+  lines.push(`Memory notes (${memories.length}):`);
+  const sorted = [...memories].sort((a, b) => (TYPE_ORDER[a.memory_type] ?? 9) - (TYPE_ORDER[b.memory_type] ?? 9));
+  for (const m of sorted) {
+    const fm = String(m.content).match(/^---\n[\s\S]*?\n---/)?.[0] || '';
+    const desc = fm.match(/^description:\s*["']?(.+?)["']?\s*$/m)?.[1]
+      || String(m.content).replace(/^---\n[\s\S]*?\n---\n?/, '').replace(/^#.*$/gm, '').replace(/\s+/g, ' ').trim().slice(0, 140);
+    lines.push(`- [${m.memory_type}] ${m.title}: ${desc}`);
+  }
+  return lines.join('\n').slice(0, 3000);
+}
+
 // Returns { description, stack } or null (failure is reported on stderr, never thrown).
 export async function extractProjectMeta(content, { host, model }) {
   try {
@@ -59,12 +81,11 @@ export async function extractProjectMeta(content, { host, model }) {
         model,
         messages: [
           { role: 'system', content: 'You analyze project memory notes and output JSON metadata. Always respond with only valid JSON, no extra text.' },
-          { role: 'user', content: `Read these project memory notes and extract metadata. Respond with ONLY this JSON:
-{"description": "<one sentence about what this project actually is or does>", "stack": ["<real tech tags>"]}
+          { role: 'user', content: `Below is an overview of one project: its name, possibly its README, and a one-line summary of each memory note kept about it. Describe the PROJECT AS A WHOLE — what it is or does — not any single note. Respond with ONLY this JSON:
+{"description": "<one sentence: what this project is or does>", "stack": ["<real tech tags>"]}
 
 Valid tech tags: ${STACK_TAGS.join(', ')}
 
-Project memory notes:
 ${content.slice(0, 3000)}` },
         ],
         stream: false,
