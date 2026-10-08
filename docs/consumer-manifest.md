@@ -49,14 +49,13 @@ consumer writes only its own `<consumer>.json` (consumer→producer). Schema 2 i
 {
   "schema": 2,
   "consumer": "memoryCentral",
-  "generated": "2026-09-22T19:17:02Z",
+  "generated": "2026-10-09T19:17:02Z",
   "selection_policy": "requirements-fit",
-  "source": "benchllama@2026-09-02",
+  "source": "manual",
   "assignments": {
-    "embed":   { "model": "embeddinggemma:300m", "capability": "embedding", "basis": "embedding_long", "tier": "primary" },
-    "extract": { "model": "granite4.2:3b",       "capability": "manual",    "tier": "primary" }
+    "embed": { "model": "embeddinggemma-2:270m-bf16-text", "capability": "embedding", "basis": "embedding_long", "tier": "primary" }
   },
-  "models_in_use": ["embeddinggemma:300m", "granite4.2:3b"],
+  "models_in_use": ["embeddinggemma-2:270m-bf16-text"],
   "gaps": [
     { "capability": "embedding", "observed_with": "granite-embedding:30m",
       "issue": "512-token window truncated 66% of the corpus",
@@ -129,6 +128,11 @@ by the BenchLLAMA eval. If/when an importer lands, it should also call `writeMan
 
 Globs `~/.config/ollama-consumers/*.json`, unions every `models_in_use` into the working set, then
 per installed Ollama model classifies **KEEP / ADVISE-SWITCH / DROP-candidate / UNSCORED**, never
-auto-dropping an in-use model. MemoryCentral's manifest contributes `embeddinggemma:300m` and
-`granite4.2:3b` (`gemma4:e4b-mlx` until 2026-09-23) to the protected set, plus the `requirements-fit` policy + `rationale` that should
-inform EMB-battery tuning. Implemented in BenchLLAMA's `consumers.py` (confirmed 2026-08-23); extract is a `manual` pin, so it is protected but never drop-evaluated.
+auto-dropping an in-use model. MemoryCentral's manifest contributes its active embedding model to the
+protected set (per machine: `embeddinggemma-2:270m-bf16-text` on Apple Silicon, `embeddinggemma:300m`
+elsewhere, none on the built-in engine), plus the `requirements-fit` policy + `rationale` that should
+inform EMB-battery tuning. Implemented in BenchLLAMA's `consumers.py` (confirmed 2026-08-23).
+
+**2026-10-09:** the `extract` assignment is gone. Project metadata now comes from a declarative
+`## MemoryCentral` block (`server/projectBlock.js`); `granite4.2:3b` (and before it `gemma4:e4b-mlx`) is no
+longer used by MemoryCentral, and the rationale says so, so its drop from `models_in_use` reads as deliberate.

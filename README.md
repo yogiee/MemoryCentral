@@ -2,9 +2,9 @@
   <img src="server/assets/brand/lockup-horizontal.svg" alt="MemoryCentral" width="50%" />
 </p>
 
-<p align="center">Cross-project knowledge bank for Claude Code. Harvests memory files from every Claude project on your machine into a searchable SQLite database, exposed as a global MCP server.</p>
+<p align="center">One memory for every project and every AI tool you use.<br>Decisions, fixes and gotchas saved in one tool become searchable from all the others.</p>
 
-<p align="center"><strong>macOS · Windows · Linux</strong></p>
+<p align="center"><strong>macOS · Windows · Linux</strong> &nbsp;·&nbsp; Claude Code · GitHub Copilot · Codex · OpenCode · any MCP client</p>
 
 ---
 
@@ -25,35 +25,20 @@
 
 ## What it does
 
-- Harvests `~/.claude/projects/*/memory/*.md` from all your Claude sessions
-- Stores everything in SQLite with full-text search (FTS5) and optional semantic embeddings
-- Exposes 9 MCP tools available in **every** Claude session, globally
-- Auto-syncs after each session via a Stop hook (async, non-blocking)
-- Local web dashboard at `http://localhost:9980` — Finder-style three-column browser
-- Export/import for machine migration and backup
+- **One shared memory, any AI tool.** Anything that speaks MCP can save to it and search it. Claude Code, VS Code with Copilot, Codex and OpenCode have ready-made setup snippets.
+- **Imports what you already have.** Claude Code's existing project memories are indexed where they are, and whatever it writes later keeps flowing in. Memories from tools without a memory system of their own go to MemoryCentral's store.
+- **Finds things by meaning or by name.** Semantic search ("how did we handle retries?") plus full-text search, across every project.
+- **Never loses knowledge by accident.** A missing or unreadable folder never deletes anything. Deleted memories can be restored for 30 days. See [storage and retention](docs/storage-and-retention.md).
+- **Local and private.** Plain Markdown files and one SQLite database on your machine. Embeddings run locally, with Ollama or built in.
+- **A dashboard** at `http://localhost:9980` to browse, search, set up and manage it all.
 
-## Making Claude Use It
+## Requirements
 
-Installing MemoryCentral gives you the search infrastructure. To make Claude *proactively* reach for it while coding — before it opens Context7 or does a web search — you need one small convention per project: a `## Stack` block in each project's `CLAUDE.md`.
-
-```markdown
-## Stack
-swift, uikit, swiftdata
-```
-
-With that in place and the lookup rule in your global `~/.claude/CLAUDE.md` (added automatically by `setup.js`), Claude will call `find_by_stack` and `find_similar` before every implementation task — surfacing solutions from other projects on the same stack without you having to ask.
-
-**[Full setup guide and best practices → docs/usage.md](docs/usage.md)**
-
----
-
-## Prerequisites
-
-| Requirement | Notes |
-|-------------|-------|
-| **Node.js 22+** | Required for built-in `node:sqlite`. [nodejs.org](https://nodejs.org) |
-| **Claude Code** | The CLI — [claude.ai/code](https://claude.ai/code) |
-| **Ollama** _(optional)_ | Enables richer semantic search and project metadata. [ollama.com](https://ollama.com) |
+| | |
+|---|---|
+| **Node.js 22+** | [nodejs.org](https://nodejs.org) (uses the built-in `node:sqlite`) |
+| **Git** | to clone the repository |
+| **Ollama** *(optional, recommended)* | [ollama.com](https://ollama.com), for the best semantic search. Without it, MemoryCentral uses a built-in engine. |
 
 ## Install
 
@@ -63,209 +48,95 @@ cd MemoryCentral
 node setup.js
 ```
 
-`setup.js` will:
-1. Check your Node.js version
-2. Install dependencies (`npm install`)
-3. Register the MCP server globally (`claude mcp add --scope user`)
-4. Print a Stop hook snippet to add to `~/.claude/settings.json`
-5. Run the first sync
+`setup.js` installs dependencies on first run, then opens the dashboard in your browser, where setup takes a few steps:
 
-Then **start a new Claude Code session** — `memoryCentral` tools will be available.
+1. **Welcome.** It shows what it found on this machine, including existing AI-tool memories it will import.
+2. **Choose a search engine.**
+   - **Ollama:** best quality; runs as a separate app. If it isn't installed, you get the install command for your OS.
+   - **Built-in:** nothing to install; runs on your CPU.
+3. **Set up the engine.** Pick a model; only models that run on your machine are offered. It downloads with a progress bar.
+4. **Import & index.** Your existing memories become searchable.
+5. **Connect your apps.** Copy-ready registrations for each AI tool, with this machine's paths filled in. See [connecting apps](docs/connecting-apps.md).
+6. **Project blocks.** An optional short block per project. It names and describes the project and tells the AI to use MemoryCentral. See [project blocks](docs/project-block.md).
 
-## Dashboard
+Then restart your AI tools. That's it: MemoryCentral keeps itself current from then on.
 
-The dashboard starts automatically at `http://localhost:9980` alongside the MCP server in every Claude session. Run it standalone anytime:
+Run `node setup.js` any time later to open the dashboard without any AI tool running.
 
-```bash
-node dashboard.js
-```
+## Using it
 
-### Layout
+Once connected, your AI tool knows when to reach for MemoryCentral. MemoryCentral sends it instructions: search before implementing, fixing or researching, and save what it learns. You can also just ask: *"how did we handle auth in the other project?"*
 
-Three-column Finder-style browser — always visible:
+| Tool | For |
+|---|---|
+| `find_similar` | Search by meaning across every project |
+| `search_memories` | Search for names: a library, an error message, a command |
+| `find_by_stack` | Projects using a technology |
+| `save_memory` / `delete_memory` | Create, update or remove a memory |
+| `list_projects`, `get_project_summary`, `get_project_memories`, `get_dashboard` | Browse |
+| `sync` | Re-read every memory folder now (it also happens on its own) |
 
-| Column | Content |
-|--------|---------|
-| **Projects** (320px) | All tracked projects grouped by primary stack tag, ordered by most recent memory activity |
-| **Memories** (360px) | Memory list for the selected project, search results, or recent feed |
-| **Detail** | Full memory content rendered from Markdown |
+Details: [MCP tools](docs/mcp-tools.md) · [Using MemoryCentral well](docs/usage.md).
 
-### Features
+## The dashboard
 
-- **Overview landing** — stat tiles, memories-by-stack bar chart, memories-by-type breakdown, recent activity feed, embeddings tier indicator
-- **Project view** — memories grouped by type (project / reference / user / feedback) with type-filter pills
-- **Full-text search** — FTS5 with `<mark>` highlighted excerpts, debounced as you type
-- **Recent activity** — last 12 modified memories across all projects via rail button
-- **Memory detail** — Markdown rendered in-pane; Copy path and Find similar actions
-- **Light / Dark / System** themes — persisted to `localStorage`
-- **Sync button** — triggers a full harvest from the rail without leaving the browser
-- **Cmd-K** — focuses search from anywhere; Esc clears and returns to previous view
+`http://localhost:9980` is available while any connected AI tool is running, or on its own via `node setup.js`.
 
-### Keyboard shortcuts
+- **Browse:** projects grouped by stack, each project's memories by type, the full memory rendered in place
+- **Search:** full-text with highlighted excerpts (⌘K / Ctrl+K)
+- **Settings:** search engine and model, connect apps, project blocks, every memory folder and its status, recently deleted memories
+- Light, dark and system themes
 
-| Shortcut | Action |
-|----------|--------|
-| `Cmd-K` / `Ctrl-K` | Focus search |
-| `Esc` (in search) | Clear search and return to previous view |
+## Search engines
 
-## MCP Tools
-
-| Tool | Description |
-|------|-------------|
-| `list_projects` | All tracked projects with description, stack tags, memory count |
-| `get_project_summary` | Structured overview: description, stack, memory list by type |
-| `get_project_memories` | Full content of all memory files for a project |
-| `search_memories(query, project?)` | FTS keyword search across all projects (or one) |
-| `find_similar(description)` | Semantic search — see [Semantic Search](#semantic-search) below |
-| `find_by_stack(tag)` | All projects using a given tech tag (swift, node, python…) |
-| `save_memory(project, filename, content)` | Write a memory mid-session — filesystem + DB + embeddings |
-| `get_dashboard` | Cross-project dashboard grouped by primary stack tag |
-| `sync` | Trigger a full harvest from all Claude project sessions |
-
-## Sync
-
-Sync runs automatically after each session via the Stop hook. To run manually:
-
-```bash
-node sync.js
-```
-
-## Project-level Memory Integration
-
-Some projects keep memory files outside the standard `~/.claude/projects/*/memory/` path — for example a `memory-bank/` folder inside the project repo itself (common with Cursor or Cline workflows). MemoryCentral can harvest those too.
-
-Create `~/.memorycentralrc.json` and declare extra scan paths per project name:
-
-```json
-{
-  "extraPaths": {
-    "client-app": ["/Users/you/work/client-app/memory-bank"],
-    "another-project": ["/path/to/docs", "/another/path"]
-  }
-}
-```
-
-- Project names must match exactly as shown in the dashboard or `list_projects`
-- Multiple directories per project are supported
-- Files are merged into the same project entry — fully searchable alongside Claude memory files
-- The config is machine-specific and never committed to git
-
-Run `node sync.js` after adding the config to pick up the new files immediately.
-
-## Backup and Restore
-
-### Export
-
-```bash
-node export.js
-# → memoryCentral-backup-2026-05-28.json.gz
-```
-
-Creates a compressed backup of all memory files. Use this before reinstalling your OS or migrating to a new machine.
-
-### Import
-
-```bash
-node import.js memoryCentral-backup-2026-05-28.json.gz
-```
-
-Restores all memory files and rebuilds the database automatically.
-
-**Same machine / same username:** everything restores in place automatically.
-
-**New machine or new username:** files are restored to the same encoded paths. Claude Code will find them once you open the corresponding projects from the same absolute paths. The import prints a manifest so you can see exactly which projects are in the backup.
-
----
-
-## Semantic Search
-
-`find_similar` uses vector embeddings to find memories by concept rather than keyword. It works in three tiers depending on what's available:
-
-### Tier 1 — Ollama (recommended)
-
-If [Ollama](https://ollama.com) is running, it's used automatically. Ollama can be local or on another machine on your network. The default model depends on the platform, because the better model is only published as MLX:
-
-| Where Ollama runs | Default model | Pull |
+| | Ollama | Built-in |
 |---|---|---|
-| Apple Silicon Mac (local Ollama) | `embeddinggemma-2:270m-bf16-text` | `ollama pull embeddinggemma-2:270m-bf16-text` |
-| Windows, Linux, Intel Mac, or any remote `OLLAMA_HOST` | `embeddinggemma:300m` | `ollama pull embeddinggemma:300m` |
+| Install | Ollama app + one model download (~0.6 GB) | nothing; one-time model download |
+| Runs on | GPU (local or another machine) | CPU, inside MemoryCentral |
+| Quality | best, especially for specific facts in long memories | good for topics; lower on specific facts |
+| Model | `embeddinggemma-2` on Apple Silicon, `embeddinggemma:300m` elsewhere | see the [evaluation](docs/embedding-eval-2026-10-09.md) |
 
-Highest quality embeddings, runs entirely offline, zero API cost. Memories are embedded as overlapping ~4,000-character chunks, so long memories are searchable end to end. On Apple Silicon, `embeddinggemma-2` finds specific facts noticeably better and uses about a third of the memory (`docs/embedding-eval-2026-10-09.md`). Override the model with `EMBED_MODEL`. Switching models requires re-embedding: `node server/reembed.js`.
+You can switch any time in Settings. MemoryCentral re-indexes in the background, and keyword search keeps working throughout. How the models were chosen: [embedding evaluation](docs/embedding-eval-2026-10-09.md).
 
-**Remote Ollama:** set `OLLAMA_HOST` in the MCP server config in `~/.claude.json`:
+## Backup and restore
 
-```json
-"memoryCentral": {
-  "command": "node",
-  "args": ["/path/to/MemoryCentral/server/index.js"],
-  "env": { "OLLAMA_HOST": "http://192.168.1.50:11434" }
-}
+```bash
+node export.js                  # → memoryCentral-backup-YYYY-MM-DD.json.gz
+node import.js <backup-file>    # on any machine, after node setup.js
 ```
 
-Defaults to `http://localhost:11434` when not set.
+A backup holds every memory from every source, plus projects, settings and recently deleted memories. Restoring puts files back where they came from, or into MemoryCentral's own store if that folder doesn't exist on the new machine.
 
-### Tier 2 — transformers.js (no Ollama required)
-
-On a machine without Ollama, set `"embedProvider": "local"` in `~/.memorycentralrc.json` (or `EMBED_PROVIDER=local`) and MemoryCentral embeds with [`@huggingface/transformers`](https://huggingface.co/docs/transformers.js) running `all-MiniLM-L6-v2` directly in Node.js. This is a setup-time choice, not an automatic fallback — mixing vector spaces mid-run would make rows invisible to search.
-
-- No service to run — model loads inside the Node process
-- First use downloads ~25 MB and caches locally (one time only)
-- Slightly lower quality than embeddinggemma and a smaller context window (384-dim, ~512 tokens), but still meaningfully semantic
-- Note: this is a *different* model/vector space than Tier 1 — a table built on one engine must be re-embedded if you switch engines
-
-### Tier 3 — In-context Claude matching (always works)
-
-If the configured provider is unavailable, `find_similar` returns all memory content for Claude to match using its own understanding. Uses more context window but requires zero setup.
-
-### Project metadata extraction
-
-When Ollama is running, sync also uses `granite4.2:3b` (override with `EXTRACT_MODEL`) to auto-extract human-readable descriptions and stack tags for each project. Without Ollama, descriptions show as `_unknown_` — but all memory content is still fully indexed and searchable.
-
-### Capability summary
-
-| Feature | No Ollama | With Ollama |
-|---------|-----------|-------------|
-| `search_memories` (keyword) | ✓ Full | ✓ Full |
-| `find_similar` (semantic) | ✓ Via transformers.js (`embedProvider: local`) or Claude | ✓ Best quality |
-| Project descriptions + stack tags | ✗ Empty | ✓ Auto-extracted |
-| Dashboard embeddings tier | Tier 2 / 3 shown | Tier 1 shown |
-
----
-
-## Architecture
+## Where things live
 
 ```
-~/.claude/projects/<project>/memory/*.md   ← Claude writes here per session
-              ↓  node sync.js  (Stop hook + manual)
-stats/knowledge.db                         ← SQLite: FTS5 + embeddings
-              ↓  server/index.js  (MCP server + dashboard)
-Any Claude session                         ← 9 MCP tools, cross-project search
-              ↓  save_memory tool
-~/.claude/projects/<project>/memory/*.md   ← writes back to filesystem
-http://localhost:9980                      ← local dashboard (auto-starts)
+~/.memorycentral/            MemoryCentral's data (override: MEMORYCENTRAL_HOME)
+  memorycentral.db           the index: memories, full-text, vectors, settings
+  projects/<name>/memory/    memories MemoryCentral owns
+  models/                    built-in embedding models
+~/.claude/projects/*/memory  Claude Code's memories, read in place
 ```
 
-## What's in git
+The repository contains only the engine. No personal data is ever committed.
 
-The repo contains only the **engine** — no personal data is ever committed.
+## Documentation
 
-```
-server/         MCP server, sync logic, dashboard HTTP server
-server/public/  Dashboard HTML + CSS + JS (no build step)
-server/assets/  Icon SVGs
-setup.js        One-time setup
-sync.js         Stop hook entry point
-export.js       Backup utility
-import.js       Restore utility
-docs/           Screenshots
-```
+| | |
+|---|---|
+| [Architecture](docs/architecture.md) | every component and how they fit together |
+| [Connecting apps](docs/connecting-apps.md) | Claude Code, VS Code, Codex, OpenCode, others |
+| [MCP tools](docs/mcp-tools.md) | what each tool does |
+| [Project blocks](docs/project-block.md) | the per-project `## MemoryCentral` block |
+| [Using MemoryCentral well](docs/usage.md) | what to save, how to search |
+| [Storage and retention](docs/storage-and-retention.md) | where memories live and when anything is removed |
+| [Configuration](docs/configuration.md) | settings and environment variables |
+| [Troubleshooting](docs/troubleshooting.md) | when something isn't working |
+| [Embedding evaluation](docs/embedding-eval-2026-10-09.md) | how the search models were chosen |
 
-Personal data (memories, snapshots, database) lives locally and never leaves your machine unless you explicitly run `node export.js` and share the file.
+## Upgrading from an earlier version
 
-## Stack
+Pull, then reconnect MemoryCentral in each AI tool, or restart the tools, so none keeps running old code. The first start moves the index into `~/.memorycentral/` (the old `stats/knowledge.db` stays as a backup), imports `~/.memorycentralrc.json`, and skips onboarding. Projects now take their description from a [project block](docs/project-block.md); the Ollama extraction model is no longer used.
 
-- **Node.js 22+** — `node:sqlite` built-in (zero native deps for core)
-- **SQLite** — WAL mode, FTS5 full-text search, vector embeddings as JSON
-- **@huggingface/transformers** — local embedding provider (Tier 2, opt-in), ~25 MB model download on first use
-- **Ollama** _(optional)_ — `embeddinggemma:300m` embeddings, `granite4.2:3b` meta extraction
-- **@modelcontextprotocol/sdk** — stdio MCP transport
+## Built with
+
+Node.js 22 (`node:sqlite`) · SQLite FTS5 · [@modelcontextprotocol/sdk](https://github.com/modelcontextprotocol/typescript-sdk) · [Ollama](https://ollama.com) · [transformers.js](https://huggingface.co/docs/transformers.js) · no build step, no native dependencies
