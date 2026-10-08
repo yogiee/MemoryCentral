@@ -89,7 +89,7 @@ export async function embedMemory(db, mem) {
 // Returns { drained, remaining }, plus { reason, message } whenever something was
 // left behind — a caller reporting "N still pending" without saying why is what
 // let a healthy-provider failure hide in plain sight.
-export async function drainPending(db, log = () => {}) {
+export async function drainPending(db, log = () => {}, onProgress = () => {}) {
   const rows = db.prepare(`
     SELECT m.id, m.title, m.content, m.embed_hash FROM memories m
     WHERE ${PENDING_WHERE}
@@ -104,7 +104,9 @@ export async function drainPending(db, log = () => {}) {
 
   let drained = 0, consecutiveFailures = 0, lastFailure = null;
 
-  for (const r of rows) {
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    onProgress({ phase: 'embed', i: i + 1, n: rows.length });
     const result = await embedMemory(db, r);
     if (!result.ok) {
       lastFailure = result;

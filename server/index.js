@@ -9,6 +9,7 @@ import { countPending, startBackfillLoop } from './backlog.js';
 import { syncAll, formatSyncStats } from './ingest.js';
 import { saveMemory, deleteMemory } from './store.js';
 import { generatedDir } from './paths.js';
+import { getSetting } from './settings.js';
 import { start as startDashboard } from './dashboard.js';
 import { writeManifest } from './manifest.js';
 import { INSTRUCTIONS, USAGE_PROMPT } from './instructions.js';
@@ -21,6 +22,15 @@ useSettingsDb(db);
 {
   const cfg = activeConfig();
   if (!cfg.runnable) console.error(`memoryCentral: ⚠ embedding model ${cfg.model} can't run on this machine — change it on the dashboard (http://localhost:9980) or set EMBED_MODEL`);
+}
+
+// Until setup is finished (engine chosen on the dashboard), say so where the user
+// will see it: the server works on defaults meanwhile, but semantic search may not.
+// A server started by an AI tool never opens a browser itself.
+function setupHint() {
+  if (getSetting(db, 'setup.completed_at')) return '';
+  return `\n\n_MemoryCentral setup isn't finished — tell the user to run \`node setup.js\` in the MemoryCentral folder ` +
+    `(or open http://localhost:${Number(process.env.MC_DASHBOARD_PORT) || 9980}) to choose a search engine._`;
 }
 
 // ---------------------------------------------------------------------------
@@ -52,7 +62,7 @@ server.tool(
       ].join('\n');
     });
 
-    return { content: [{ type: 'text', text: `# Projects (${projects.length})\n\n${lines.join('\n\n')}` }] };
+    return { content: [{ type: 'text', text: `# Projects (${projects.length})\n\n${lines.join('\n\n')}${setupHint()}` }] };
   },
 );
 
@@ -197,7 +207,7 @@ server.tool(
         '',
         ...all.map(r => `**${r.project_name}/${r.filename}** [${r.memory_type}]\n_${r.title}_\n${r.content.slice(0, 300)}${r.content.length > 300 ? '…' : ''}`),
       ].join('\n\n---\n\n');
-      return { content: [{ type: 'text', text }] };
+      return { content: [{ type: 'text', text: text + setupHint() }] };
     }
 
     const { vector: queryVec, model } = embedResult;
@@ -249,7 +259,7 @@ server.tool(
         `or matched on superseded content. Keyword search (search_memories) is unaffected._`
       : '';
 
-    return { content: [{ type: 'text', text: `# Similar to "${description}" (via ${model})\n\n${text}${pendingNote}` }] };
+    return { content: [{ type: 'text', text: `# Similar to "${description}" (via ${model})\n\n${text}${pendingNote}${setupHint()}` }] };
   },
 );
 

@@ -1,59 +1,64 @@
 #!/usr/bin/env node
-// One-time setup script. Cross-platform (macOS, Windows, Linux).
-// Usage: node setup.js
-import { spawnSync } from 'child_process';
+// Start here: `node setup.js`
+//
+// Checks Node, installs dependencies if needed, then serves the MemoryCentral
+// dashboard and opens it in your browser. Everything else — choosing a search
+// engine, downloading a model, importing existing memories, and connecting your
+// AI tools — happens on that page. Works the same on macOS, Windows and Linux.
+//
+// The dashboard keeps running until you stop it (Ctrl+C). It is also how you
+// browse and search memories without any AI tool open. AI tools start their own
+// MemoryCentral server in the background once connected; that one never opens a
+// browser.
+//
+//   node setup.js             open the dashboard (port 9980, or MC_DASHBOARD_PORT)
+//   node setup.js --no-open   start it without opening a browser
+import { spawnSync, spawn } from 'child_process';
+import { existsSync } from 'fs';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname, join, resolve } from 'path';
 
-const __dirname  = dirname(fileURLToPath(import.meta.url));
-const serverDir  = join(__dirname, 'server');
-const serverEntry = resolve(join(serverDir, 'index.js'));
-const syncEntry   = resolve(join(__dirname, 'sync.js'));
-const isWin       = process.platform === 'win32';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const serverDir = join(__dirname, 'server');
+const isWin = process.platform === 'win32';
+const port = Number(process.env.MC_DASHBOARD_PORT) || 9980;
+const url = `http://localhost:${port}`;
 
-function run(cmd, args, opts = {}) {
-  return spawnSync(cmd, args, { stdio: 'inherit', shell: isWin, ...opts });
-}
-
-// ── 1. Node version check (22+ required for node:sqlite) ────────────────────
+// 1. Node 22+ (node:sqlite).
 const major = parseInt(process.versions.node.split('.')[0], 10);
 if (major < 22) {
-  console.error(`ERROR: Node.js 22+ required (found v${process.versions.node})`);
-  console.error('Download: https://nodejs.org');
+  console.error(`MemoryCentral needs Node.js 22 or newer (found ${process.versions.node}). Download: https://nodejs.org`);
   process.exit(1);
 }
-console.log(`✓  Node.js v${process.versions.node}`);
 
-// ── 2. Install dependencies ─────────────────────────────────────────────────
-console.log('\nInstalling dependencies...');
-const install = run('npm', ['install', '--prefix', serverDir, '--silent']);
-if (install.status !== 0) { console.error('npm install failed'); process.exit(1); }
-console.log('✓  Dependencies installed');
-
-// ── 3. Register MCP server with Claude Code ─────────────────────────────────
-console.log('\nRegistering MCP server...');
-const mcp = run('claude', ['mcp', 'add', '--scope', 'user', 'memoryCentral', process.execPath, serverEntry]);
-if (mcp.status !== 0) {
-  console.error('\n⚠  Auto-registration failed. Run this manually:');
-  console.error(`   claude mcp add --scope user memoryCentral ${process.execPath} "${serverEntry}"`);
-} else {
-  console.log('✓  MCP server registered (memoryCentral)');
+// 2. Dependencies, once.
+if (!existsSync(join(serverDir, 'node_modules'))) {
+  console.log('Installing dependencies (first run only)…');
+  const r = spawnSync('npm', ['install', '--prefix', serverDir, '--no-fund', '--no-audit'], { stdio: 'inherit', shell: isWin });
+  if (r.status !== 0) { console.error('npm install failed — see the output above.'); process.exit(1); }
 }
 
-// ── 4. Print Stop hook snippet ──────────────────────────────────────────────
-const hookCmd = isWin ? `node "${syncEntry.replace(/\\/g, '\\\\')}"` : `node "${syncEntry}"`;
-console.log(`
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Add this to ~/.claude/settings.json to enable auto-sync
-  (merges with any existing content in that file)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${JSON.stringify({ hooks: { Stop: [{ matcher: '', hooks: [{ type: 'command', command: hookCmd, async: true }] }] } }, null, 2)}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`);
+function openBrowser() {
+  if (process.argv.includes('--no-open')) return;
+  const [cmd, args] = isWin ? ['cmd', ['/c', 'start', '""', url]]
+    : process.platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
+  try { spawn(cmd, args, { stdio: 'ignore', detached: true }).unref(); } catch {}
+}
 
-// ── 5. First sync ────────────────────────────────────────────────────────────
-console.log('Running first sync...\n');
-await import(join(__dirname, 'server', 'sync.js'));
+// 3. A dashboard already running (another setup, or a connected AI tool's server)
+//    serves the same page — open that rather than starting a second one.
+try {
+  const r = await fetch(`${url}/api/setup/status`, { signal: AbortSignal.timeout(1500) });
+  if (r.ok) {
+    console.log(`MemoryCentral is already running → ${url}`);
+    openBrowser();
+    process.exit(0);
+  }
+} catch {}
 
-console.log('\n✓  Setup complete.');
-console.log('   Start a new Claude Code session — memoryCentral tools will be available.');
+const { start } = await import('./server/dashboard.js');
+const server = start(port, true);
+server.once('listening', () => {
+  console.log(`\nMemoryCentral → ${url}\nFinish setup in your browser. Press Ctrl+C to stop the dashboard.\n`);
+  openBrowser();
+});

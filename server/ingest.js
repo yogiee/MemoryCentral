@@ -24,7 +24,7 @@ import { contentHash } from './db.js';
 import { embedHash } from './chunk.js';
 import { memoryType, extractTitle } from './meta.js';
 import { ADAPTERS, scanSource } from './sources.js';
-import { readProjectMeta, readmeDescription } from './projectBlock.js';
+import { readProjectMeta, fallbackDescription } from './projectBlock.js';
 import { getSetting, acquireLease, releaseLease, importRcOnce } from './settings.js';
 import { drainPending, countPending, embedMemory } from './backlog.js';
 import { generatedDir, safeDirName } from './paths.js';
@@ -173,14 +173,15 @@ function reconcile(db, { project, source, files, now, stats, toEmbed }) {
 
 // Applies a project's own declaration (its MemoryCentral block, or legacy `## Stack`)
 // over what is stored. Without a declaration a stored description is kept; a project
-// with none at all takes its README's first paragraph. No model calls.
+// with none at all takes the opening paragraph of its instructions file or README.
+// No model calls.
 function refreshProjectMeta(db, project) {
   const overrides = getSetting(db, 'stack.overrides', {});
   const declared = readProjectMeta(project.repo_path);
   let description = project.description;
   let stack = JSON.parse(project.stack || '[]');
   if (declared?.description) description = declared.description;
-  else if (!description && project.repo_path) description = readmeDescription(project.repo_path) || '';
+  else if (!description && project.repo_path) description = fallbackDescription(project.repo_path) || '';
   if (overrides[project.name]) stack = overrides[project.name];
   else if (declared?.stack) stack = declared.stack;
   db.prepare('UPDATE projects SET description=?, stack=?, meta_file=? WHERE id=?')

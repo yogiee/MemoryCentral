@@ -100,3 +100,7 @@ test('find_similar degrades to in-context matching when the embedder is down, sa
   assert.match(r.text, /degraded/i);
   assert.match(r.text, /provider_down/);
 });
+
+test('until setup is finished, answers tell the user how to finish it', async () => {
+  assert.match((await call('list_projects')).text, /setup isn't finished.*node setup\.js/s);
+});

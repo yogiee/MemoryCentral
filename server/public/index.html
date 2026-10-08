@@ -41,7 +41,7 @@
       <kbd>⌘K</kbd>
     </label>
 
-    <div class="toolbar-status" id="sync-status" title="Last sync via Stop hook">
+    <div class="toolbar-status" id="sync-status" title="Last sync">
       <span class="dot"></span>
       <span id="sync-label">—</span>
     </div>
@@ -83,6 +83,12 @@
         <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
       </svg>
     </button>
+    <button data-view="settings" title="Settings">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>
+      </svg>
+    </button>
     <div class="rail-spacer"></div>
     <button id="rail-sync" title="Sync now">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -115,6 +121,7 @@
 
   </div>
 </main>
+<script src="/setup.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

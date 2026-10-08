@@ -1,6 +1,7 @@
 // Dashboard HTTP server — imported by server/index.js (MCP process)
 // and by the root dashboard.js standalone runner.
 import { createServer } from 'http';
+import { randomBytes } from 'crypto';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
@@ -8,6 +9,7 @@ import { openDb, ftsQuery } from './db.js';
 import { activeConfig, useSettingsDb } from './embed.js';
 import { countPending } from './backlog.js';
 import { syncAll, formatSyncStats } from './ingest.js';
+import * as setup from './setupApi.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC   = join(__dirname, 'public');
@@ -247,10 +249,12 @@ export function start(port = 9980, keepAlive = false) {
   // handle, so take a long-lived one — the embedder follows shared settings.
   if (keepAlive) useSettingsDb(openDb());
   const server = createServer((req, res) => {
+    if (!hostAllowed(req, port)) { res.writeHead(403); res.end('Forbidden host'); return; }
     if (req.method === 'GET' || req.method === 'HEAD') {
-      handleGet(req, res, port);
-    } else if (req.method === 'POST' && req.url === '/api/sync') {
-      handleSync(res);
+      handleGet(req, res, port).catch(err => fail(res, err));
+    } else if (req.method === 'POST') {
+      if (!writeAllowed(req, port)) { res.writeHead(403); res.end('Forbidden'); return; }
+      handlePost(req, res).catch(err => fail(res, err));
     } else {
       res.writeHead(405); res.end();
     }
@@ -283,14 +287,30 @@ export function start(port = 9980, keepAlive = false) {
   return server;
 }
 
-function handleGet(req, res, port) {
+async function handleGet(req, res, port) {
   const url = new URL(req.url, 'http://localhost:' + port);
   const path = url.pathname;
 
-  // Static public files
-  if (path === '/' || path === '') return serveStatic(res, join(PUBLIC, 'index.html'));
+  // Static public files. The page carries this process's write token (see
+  // writeAllowed); other origins can't read it.
+  if (path === '/' || path === '') {
+    const html = readFileSync(join(PUBLIC, 'index.html'), 'utf8')
+      .replace('</head>', `  <meta name="mc-token" content="${TOKEN}">\n</head>`);
+    res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-store' });
+    res.end(html);
+    return;
+  }
   if (path === '/styles.css') return serveStatic(res, join(PUBLIC, 'styles.css'));
   if (path === '/app.js')     return serveStatic(res, join(PUBLIC, 'app.js'));
+  if (path === '/setup.js')   return serveStatic(res, join(PUBLIC, 'setup.js'));
+
+  // Setup and settings (read side)
+  if (path === '/api/setup/status')   return withDb(db => setup.setupStatus(db)).then(d => json(res, d));
+  if (path === '/api/ollama/check')   return json(res, await setup.ollamaCheck(url.searchParams.get('host') || undefined));
+  if (path === '/api/connect')        return json(res, setup.harnessSnippets());
+  if (path === '/api/project-blocks') return withDb(db => setup.projectBlocks(db)).then(d => json(res, d));
+  if (path === '/api/sources')        return withDb(db => setup.listSources(db)).then(d => json(res, d));
+  if (path === '/api/tombstones')     return withDb(db => setup.listTombstones(db)).then(d => json(res, d));
 
   // Icon assets
   if (path.startsWith('/assets/icons/')) {
@@ -357,6 +377,69 @@ function handleGet(req, res, port) {
     return;
   }
 
+  res.writeHead(404); res.end('Not found');
+}
+
+// ---------------------------------------------------------------------------
+// Request checks
+// ---------------------------------------------------------------------------
+//
+// The dashboard binds to 127.0.0.1, but any web page the user visits can still
+// send requests there. Two checks keep it from being driven remotely:
+//   - Host must be localhost / 127.0.0.1 on our port, for every request — this
+//     defeats DNS rebinding, where an attacker's domain re-resolves to 127.0.0.1
+//     to make its page same-origin with us.
+//   - Writes (every POST: settings, model pulls, deletes) must carry this
+//     process's token, which is only in our own page; a cross-origin page can
+//     send a request but cannot read the token to put in it.
+
+const TOKEN = randomBytes(24).toString('hex');
+
+function hostAllowed(req, port) {
+  return [`localhost:${port}`, `127.0.0.1:${port}`, `[::1]:${port}`].includes(String(req.headers.host).toLowerCase());
+}
+
+function writeAllowed(req, port) {
+  const origin = req.headers.origin;
+  if (origin && ![`http://localhost:${port}`, `http://127.0.0.1:${port}`, `http://[::1]:${port}`].includes(origin)) return false;
+  return req.headers['x-mc-token'] === TOKEN;
+}
+
+async function withDb(fn) {
+  const db = openDb();
+  try { return await fn(db); } finally { db.close(); }
+}
+
+function fail(res, err) {
+  if (res.headersSent) { res.end(); return; }
+  res.writeHead(500, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ ok: false, reason: String(err?.message || err) }));
+}
+
+async function readBody(req) {
+  let raw = '';
+  for await (const chunk of req) {
+    raw += chunk;
+    if (raw.length > 1_000_000) throw new Error('request too large');
+  }
+  return raw ? JSON.parse(raw) : {};
+}
+
+async function handlePost(req, res) {
+  const path = new URL(req.url, 'http://localhost').pathname;
+  const body = await readBody(req);
+  const id = Number(path.match(/\/(\d+)\//)?.[1]);
+  if (path === '/api/sync')            return handleSync(res);
+  if (path === '/api/settings')        return withDb(db => setup.saveSettings(db, body)).then(r => json(res, r));
+  if (path === '/api/setup/complete')  return withDb(db => setup.completeSetup(db)).then(r => json(res, r));
+  if (path === '/api/ollama/pull')     return setup.streamOllamaPull(res, body);
+  if (path === '/api/local/prepare')   return setup.streamLocalPrepare(res, body);
+  if (path === '/api/index')           return withDb(db => setup.streamIndex(res, db));
+  if (path === '/api/memory/delete')   return withDb(db => setup.retention.deleteMemory(db, body)).then(r => json(res, r));
+  if (/^\/api\/sources\/\d+\/confirm$/.test(path))    return withDb(db => setup.retention.confirm(db, id)).then(r => json(res, r));
+  if (/^\/api\/sources\/\d+\/adopt$/.test(path))      return withDb(db => setup.retention.adopt(db, id)).then(r => json(res, r));
+  if (/^\/api\/tombstones\/\d+\/restore$/.test(path)) return withDb(db => setup.retention.restore(db, id)).then(r => json(res, r));
+  if (/^\/api\/tombstones\/\d+\/purge$/.test(path))   return withDb(db => setup.retention.purge(db, id)).then(r => json(res, r));
   res.writeHead(404); res.end('Not found');
 }
 

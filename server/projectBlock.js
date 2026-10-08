@@ -83,16 +83,40 @@ function legacyStack(src) {
   return parseStack(candidates);
 }
 
-// First paragraph of a README that reads like prose — the description of last
-// resort, for projects with no block and no stored description.
-export function readmeDescription(repoPath) {
-  const file = join(repoPath, 'README.md');
+// The first paragraph of a file that reads like prose — the description of last
+// resort for projects without a block. Skips frontmatter, headings, rules, badges,
+// HTML, code, tables and lists, and strips inline markdown so the dashboard shows
+// text, not `**syntax**`.
+export function firstParagraph(file) {
   if (!existsSync(file)) return null;
-  const paras = readFileSync(file, 'utf8').replace(/<!--[\s\S]*?-->/g, '').split(/\n\s*\n/);
-  for (const p of paras) {
+  let src = readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
+  src = src.replace(/^---\n[\s\S]*?\n---\n/, '').replace(/<!--[\s\S]*?-->/g, '').replace(/```[\s\S]*?```/g, '');
+  for (const p of src.split(/\n\s*\n/)) {
     const text = p.trim();
-    if (!text || /^(#|!\[|\[!|<|```|\||[-*] )/.test(text)) continue;
-    return text.replace(/\s+/g, ' ').slice(0, 300);
+    if (!text || /^(#|!\[|\[!|<|\||[-*+] |\d+\. |>)/.test(text) || /^([-*_])\1{2,}$/.test(text)) continue;
+    const plain = text
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/(\*\*|__|\*|_|`)(.+?)\1/g, '$2')
+      .replace(/\s+/g, ' ').trim();
+    // A paragraph about the file itself, not the project — `/init` opens every
+    // CLAUDE.md with "This file provides guidance to Claude Code…".
+    if (plain.length < 20 || /^this (file|document) (provides|is|contains|gives)/i.test(plain)) continue;
+    // Framework scaffolding READMEs describe the framework, not the project.
+    if (/^(Laravel is a web application framework|This project was bootstrapped with)/.test(plain)) continue;
+    return plain.length > 300 ? plain.slice(0, 297).replace(/\s+\S*$/, '') + '…' : plain;
+  }
+  return null;
+}
+
+// A project's description when it declares none: its README's opening paragraph,
+// else its instructions file's. README first — instructions files often open with
+// directions to the agent rather than a description (measured on 23 real projects,
+// 2026-10-09). Only a fallback: the block's Description line is the real answer.
+export function fallbackDescription(repoPath) {
+  if (!repoPath) return null;
+  for (const name of ['README.md', ...INSTRUCTION_FILES]) {
+    const d = firstParagraph(join(repoPath, name));
+    if (d) return d;
   }
   return null;
 }

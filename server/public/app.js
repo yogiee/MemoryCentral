@@ -310,14 +310,14 @@ function renderOverview(data) {
   var main = el('div', { 'class': 'overview-main' });
   main.appendChild(el('div', { 'class': 'overview-eyebrow' }, 'Overview'));
   main.appendChild(el('h1', { 'class': 'overview-title' }, 'Knowledge across all projects'));
-  main.appendChild(el('p', { 'class': 'overview-sub' }, 'Everything Claude has remembered, across every project on this machine. Pick a project at left, or jump in via search.'));
+  main.appendChild(el('p', { 'class': 'overview-sub' }, 'Everything your AI tools have remembered, across every project on this machine. Pick a project at left, or jump in via search.'));
 
   // Stat tiles
   var stats = el('div', { 'class': 'stats' });
   stats.appendChild(statTile('Projects', '' + (data.projects || 0), S._projects.length + ' tracked', null));
   stats.appendChild(statTile('Memories', '' + totalMems, data.sessions14d + ' sync sessions', spark));
-  stats.appendChild(statTile('Sessions /14d', '' + (data.sessions14d || 0), 'via Stop hook', spark));
-  stats.appendChild(statTile('Last sync', data.lastSync ? relTime(data.lastSync) : '—', 'auto after session', null));
+  stats.appendChild(statTile('Syncs /14d', '' + (data.sessions14d || 0), 'with new or changed memories', spark));
+  stats.appendChild(statTile('Last sync', data.lastSync ? relTime(data.lastSync) : '—', 'automatic every few minutes', null));
   main.appendChild(stats);
 
   // By-stack bars
@@ -766,6 +766,13 @@ document.querySelectorAll('.rail [data-view]').forEach(function(b) {
         S._overviewData = data;
         renderOverview(data);
       }
+    } else if (v === 'settings') {
+      setRailActive('settings');
+      S.selectedProjectName = null;
+      S.selectedMemoryId = null;
+      setHasDetail(false);
+      renderProjects();
+      await renderSettingsView(q('#col-memories'));
     } else if (v === 'recent') {
       S.selectedProjectName = null;
       S.selectedMemoryId = null;
@@ -786,7 +793,7 @@ document.querySelectorAll('.rail [data-view]').forEach(function(b) {
 q('#rail-sync').addEventListener('click', async function() {
   q('#sync-label').textContent = 'syncing…';
   try {
-    await fetch('/api/sync', { method: 'POST' });
+    await apiPost('/api/sync');
     S._overviewData = null;
     S._projects = [];
     await boot();
@@ -850,6 +857,11 @@ document.addEventListener('keydown', function(e) {
 async function boot() {
   applyTheme(localStorage.getItem('mc-theme') || 'system');
   q('#host-pill').textContent = window.location.host;
+  // First run: onboarding takes the whole page until it is finished.
+  try {
+    var status = await apiFetch('/api/setup/status');
+    if (!status.completed && !q('.setup-overlay')) MCSetup.open({ mode: 'onboarding', onClose: boot });
+  } catch (e) {}
   try {
     var results = await Promise.all([
       apiFetch('/api/projects'),

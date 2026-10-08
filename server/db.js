@@ -18,6 +18,11 @@ export function openDb(path = dbPath()) {
   db.exec('PRAGMA busy_timeout=5000');
   db.exec('PRAGMA foreign_keys=ON');
   initSchema(db);
+  if (movedLegacy) {
+    movedLegacy = false;
+    db.prepare(`INSERT OR IGNORE INTO settings (key, value, updated_at) VALUES ('setup.completed_at', ?, ?)`)
+      .run(JSON.stringify(`migrated ${new Date().toISOString()}`), new Date().toISOString());
+  }
   return db;
 }
 
@@ -62,6 +67,10 @@ function isEmptyIndex(path) {
   }
 }
 
+// An install that had a working index before is already set up: onboarding would
+// only make its user re-confirm choices they made long ago.
+let movedLegacy = false;
+
 function moveLegacyDb(path) {
   const tmp = `${path}.migrating-${process.pid}`;
   try {
@@ -72,7 +81,7 @@ function moveLegacyDb(path) {
     // An empty index in the way is set aside (never deleted) before the link.
     if (existsSync(path)) renameSync(path, `${path}.empty-${Date.now()}`);
     for (const ext of ['-wal', '-shm']) if (existsSync(path + ext)) renameSync(path + ext, `${path}${ext}.empty-${Date.now()}`);
-    try { linkSync(tmp, path); } catch (err) { if (err.code !== 'EEXIST') throw err; }
+    try { linkSync(tmp, path); movedLegacy = true; } catch (err) { if (err.code !== 'EEXIST') throw err; }
     process.stderr.write(`memoryCentral: moved the index from ${LEGACY_DB_PATH} to ${path} (the old file is kept as a backup)\n`);
   } finally {
     try { unlinkSync(tmp); } catch {}
