@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { openDb, ftsQuery } from './db.js';
-import { embed, cosineSimilarity } from './embed.js';
+import { embed, cosineSimilarity, useSettingsDb, activeConfig } from './embed.js';
 import { countPending, startBackfillLoop } from './backlog.js';
 import { syncAll, formatSyncStats } from './ingest.js';
 import { saveMemory, deleteMemory } from './store.js';
@@ -14,6 +14,14 @@ import { writeManifest } from './manifest.js';
 import { INSTRUCTIONS, USAGE_PROMPT } from './instructions.js';
 
 const db = openDb();
+useSettingsDb(db);
+
+// A configured model that cannot run here (an MLX tag on Windows) fails every embed
+// with model_unsupported; say it once at boot, with the fix.
+{
+  const cfg = activeConfig();
+  if (!cfg.runnable) console.error(`memoryCentral: ⚠ embedding model ${cfg.model} can't run on this machine — change it on the dashboard (http://localhost:9980) or set EMBED_MODEL`);
+}
 
 // ---------------------------------------------------------------------------
 // Tools

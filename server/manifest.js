@@ -13,7 +13,8 @@
 import { writeFileSync, mkdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { EMBED_MODEL } from './embed.js';
+import { activeConfig } from './embed.js';
+import { recommendedOllamaModel } from './models.js';
 
 const CONSUMER      = 'memoryCentral';
 const MANIFEST_DIR  = join(homedir(), '.config', 'ollama-consumers');
@@ -30,7 +31,7 @@ const SELECTION_POLICY = 'requirements-fit';
 // from the rankings file's `generated` stamp so it's self-maintaining. "manual" if the embed
 // model is an explicit env pin, or if no rankings file is present to ingest.
 function resolveSource() {
-  if (process.env.EMBED_MODEL) return 'manual';
+  if (process.env.EMBED_MODEL || activeConfig().model !== recommendedOllamaModel(activeConfig().host)) return 'manual';
   try {
     const { generated } = JSON.parse(readFileSync(RANKINGS_PATH, 'utf8'));
     return `benchllama@${String(generated).slice(0, 10)}`; // YYYY-MM-DD
@@ -42,10 +43,13 @@ function resolveSource() {
 export function buildManifest(generatedISO) {
   // assignments: role → { model, capability, basis?, tier? }. capability drives per-capability
   // drop logic; basis names the exact list when a capability has more than one (embedding does).
-  const assignments = {
+  // On the built-in (Node.js) engine MemoryCentral uses no Ollama model at all, and
+  // says so: an empty set, rather than a stale pin BenchLLAMA would keep protecting.
+  const cfg = activeConfig();
+  const assignments = cfg.provider !== 'ollama' ? {} : {
     // semantic search (find_similar) + save_memory embeddings.
     embed: {
-      model: EMBED_MODEL,
+      model: cfg.model,
       capability: 'embedding',
       basis: 'embedding_long',
       tier: 'primary',

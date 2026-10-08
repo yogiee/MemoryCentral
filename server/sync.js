@@ -3,8 +3,10 @@
 // (ingest.js), so this is a convenience, not a requirement.
 import { openDb } from './db.js';
 import { syncAll, formatSyncStats } from './ingest.js';
+import { useSettingsDb } from './embed.js';
 
 const db = openDb();
+useSettingsDb(db);
 try {
   const stats = await syncAll(db, {
     onProgress: p => { if (p.phase === 'embed' && p.i === 1) process.stderr.write(`Embedding ${p.n} memorie(s)...\n`); },

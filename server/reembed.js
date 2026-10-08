@@ -12,13 +12,14 @@
 // Idempotent: re-running simply regenerates vectors in place.
 
 import { openDb } from './db.js';
-import { embed } from './embed.js';
+import { embed, useSettingsDb } from './embed.js';
 import { embedMemory } from './backlog.js';
 import { writeManifest } from './manifest.js';
 
 const staleOnly = process.argv.includes('--stale');
 
 const db = openDb();
+useSettingsDb(db);
 
 // Probe the active provider/model on one row so we know what we're migrating to.
 const probe = await embed('embedding model probe');

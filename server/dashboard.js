@@ -5,7 +5,7 @@ import { readFileSync, existsSync } from 'fs';
 import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
 import { openDb, ftsQuery } from './db.js';
-import { EMBED_PROVIDER, activeModel } from './embed.js';
+import { activeConfig, useSettingsDb } from './embed.js';
 import { countPending } from './backlog.js';
 import { syncAll, formatSyncStats } from './ingest.js';
 
@@ -103,8 +103,8 @@ function getOverview(db) {
   // embed, or written while the provider was down) and how many chunk vectors
   // back the corpus — long memories are several vectors each, see chunk.js.
   const embedStatus = {
-    provider: EMBED_PROVIDER,
-    model: activeModel(),
+    provider: activeConfig().provider,
+    model: activeConfig().model,
     pending: countPending(db),
     chunks: db.prepare('SELECT COUNT(*) AS n FROM embeddings').get().n,
   };
@@ -243,6 +243,9 @@ export const DASHBOARD_RETRY_MS = Number(process.env.DASHBOARD_RETRY_MS) || 30_0
 // unref'd, exactly like the server itself, so waiting for a port never keeps a
 // process alive that would otherwise exit.
 export function start(port = 9980, keepAlive = false) {
+  // Standalone (setup.js / dashboard.js): no MCP server has registered a settings
+  // handle, so take a long-lived one — the embedder follows shared settings.
+  if (keepAlive) useSettingsDb(openDb());
   const server = createServer((req, res) => {
     if (req.method === 'GET' || req.method === 'HEAD') {
       handleGet(req, res, port);
