@@ -11,7 +11,7 @@ Environment variables override settings. That is useful for testing, or for pinn
 | Search engine (`embed.provider`) | `ollama`, `local` (built-in) | `ollama` |
 | Ollama address (`ollama.host`) | URL | `http://localhost:11434` |
 | Ollama model (`embed.ollama.model`) | an embedding model tag | depends on the platform, see below |
-| Built-in model (`embed.local.model`) | a built-in model id | see [embedding-eval-2026-10-09.md](embedding-eval-2026-10-09.md) |
+| Built-in model (`embed.local.model`) | `all-MiniLM-L6-v2` (default: 23 MB, fast) or `embeddinggemma-300m` (197 MB; better topic search, ~10× slower to index) | `all-MiniLM-L6-v2` |
 | Stack overrides (`stack.overrides`) | `{ "Project": ["tag", …] }` | none |
 | Automatic project descriptions (`extract.enabled`) | on / off (only with Ollama) | off |
 | Description model (`extract.model`) | an Ollama chat model | `granite4.2:3b` (runs on every platform) |

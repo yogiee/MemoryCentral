@@ -203,8 +203,8 @@ var MCSetup = (function() {
         ], ollamaStatus),
         option('local', 'Built-in (Node.js)', o.reachable ? null : 'No install', [
           'Nothing else to install: runs inside MemoryCentral on your CPU.',
-          'Smaller one-time download; good for trying MemoryCentral or locked-down machines.',
-          'Lower quality on specific facts. Switch to Ollama any time.',
+          'Small one-time download (23 MB) and fast: indexes hundreds of memories in under a minute.',
+          'As good as Ollama for specific facts and everyday questions; weaker on broad topic searches. Switch to Ollama any time.',
         ]),
         footer({ disabled: !O.choice || (O.choice === 'ollama' && !o.reachable) }));
     },

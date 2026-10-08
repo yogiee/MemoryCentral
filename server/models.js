@@ -40,11 +40,25 @@ export const OLLAMA_MODELS = {
 // Other embeddinggemma-2 tags (nvfp4, mxfp8) behave like the bf16 one.
 const OLLAMA_FAMILIES = [{ match: /^embeddinggemma-2:/, like: 'embeddinggemma-2:270m-bf16-text' }];
 
+// Chosen by the 2026-10-09 Node-tier bake-off (docs/embedding-eval-2026-10-09.md),
+// nine models measured on the same corpus and probes as the Ollama models.
 export const LOCAL_MODELS = {
-  // Provisional until the Node-tier bake-off lands (docs/embedding-eval-2026-10-09.md).
+  // The default. Chunked to its real 256-token window (700 chars), MiniLM matches
+  // Ollama's embeddinggemma:300m on topic and real queries and beats it on specific
+  // facts (buried MRR 0.65 vs 0.45); its weakness is broad "gist" queries (-0.08).
+  // 8-bit: same quality within noise, 2x the speed of fp32, a quarter of the download.
+  // Indexes ~700 memories in under a minute on CPU; 0.25 GB resident; 2 ms per query.
   'all-MiniLM-L6-v2': {
-    label: 'all-MiniLM-L6-v2', sizeMB: 23, hf: 'Xenova/all-MiniLM-L6-v2', dtype: 'fp32',
+    label: 'MiniLM-L6 (fast, small)', sizeMB: 23, hf: 'Xenova/all-MiniLM-L6-v2', dtype: 'q8',
     pooling: 'mean', maxTokens: 256, chunkChars: 700,
+  },
+  // EmbeddingGemma's ONNX build through its own pooling + Dense head and its trained
+  // prompts. On par with Ollama's embeddinggemma:300m on every probe, but slow on CPU:
+  // ~2 chunks/s (a 700-memory index takes ~10 min) and 0.6-0.9 GB resident.
+  'embeddinggemma-300m': {
+    label: 'EmbeddingGemma 300M (better topic search, slow to index)', sizeMB: 197,
+    hf: 'onnx-community/embeddinggemma-300m-ONNX', dtype: 'q4', head: 'sentence_embedding', maxTokens: 2048,
+    query: GEMMA_QUERY, doc: gemmaDoc,
   },
 };
 
@@ -89,6 +103,6 @@ export function localSpec(model) {
 // production spaces as of 2026-10-09 are unchanged by this scheme.
 export function vectorSpace(engine, spec) {
   const chunk = spec.chunkChars && spec.chunkChars !== CHUNK_CHARS ? `#c${spec.chunkChars}` : '';
-  if (engine === 'local') return `${spec.id}${chunk}`;
+  if (engine === 'local') return `${spec.id}${spec.dtype && spec.dtype !== 'fp32' ? `#${spec.dtype}` : ''}${chunk}`;
   return `${spec.id}${spec.promptsTag ? `#${spec.promptsTag}` : ''}${chunk}`;
 }

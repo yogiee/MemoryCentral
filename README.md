@@ -94,8 +94,8 @@ Details: [MCP tools](docs/mcp-tools.md) · [Using MemoryCentral well](docs/usage
 |---|---|---|
 | Install | Ollama app + one model download (~0.6 GB) | nothing; one-time model download |
 | Runs on | GPU (local or another machine) | CPU, inside MemoryCentral |
-| Quality | best, especially for specific facts in long memories | good for topics; lower on specific facts |
-| Model | `embeddinggemma-2` on Apple Silicon, `embeddinggemma:300m` elsewhere | see the [evaluation](docs/embedding-eval-2026-10-09.md) |
+| Quality | best overall | on par for specific facts and everyday queries; weaker on broad topic searches |
+| Model | `embeddinggemma-2` on Apple Silicon, `embeddinggemma:300m` elsewhere | MiniLM-L6 (23 MB, indexes ~700 memories in under a minute); EmbeddingGemma optional |
 
 You can switch any time in Settings. MemoryCentral re-indexes in the background, and keyword search keeps working throughout. How the models were chosen: [embedding evaluation](docs/embedding-eval-2026-10-09.md).
 

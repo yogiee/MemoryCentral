@@ -66,6 +66,7 @@ const MODELS = {
   // and prompt. `minilm-4k` is today's production behaviour, kept for contrast: the
   // 4,000-char chunks overrun its 256-token window, so ~3/4 of each chunk is dropped.
   'minilm':     { engine: 'local', hf: 'Xenova/all-MiniLM-L6-v2', dtype: 'fp32', pooling: 'mean', maxTokens: 256, chunkChars: 700 },
+  'minilm-q8':  { engine: 'local', hf: 'Xenova/all-MiniLM-L6-v2', dtype: 'q8', pooling: 'mean', maxTokens: 256, chunkChars: 700 },
   'minilm-4k':  { engine: 'local', hf: 'Xenova/all-MiniLM-L6-v2', dtype: 'fp32', pooling: 'mean', maxTokens: 256, chunkChars: 4000 },
   'bge-small':  { engine: 'local', hf: 'Xenova/bge-small-en-v1.5', dtype: 'q8', pooling: 'cls', maxTokens: 512, chunkChars: 1500,
                   query: 'Represent this sentence for searching relevant passages: ' },

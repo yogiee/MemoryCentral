@@ -160,3 +160,47 @@ Measured with `node server/ab_embed.js --ops --models v1,v2bf16,v2nvfp4 --rounds
 5. Update `EMBED_KEEP_ALIVE`'s "673 MB" note and the CLAUDE.md stack line.
 
 Rollback = revert + `reembed.js` again (~70 s).
+
+---
+
+## Chunk size and the built-in (Node.js) engine (2026-10-09, later)
+
+Same corpus snapshot (679 memories, hash `8d1f35a3ff84`), same probes. The real-query pool was re-judged blind to 100% coverage (243 new pairs), because variants that surface new memories are otherwise scored as if their unjudged hits were irrelevant. Reproduce with `node server/ab_embed.js --variants …` and `--ops-local`.
+
+### Chunk size matters as much as the model
+
+Every chunk is a vector; a memory scores as its best chunk. Smaller chunks dilute a single fact less.
+
+| MRR (Δ vs v1) | topic | buried | gist | detail | multi-chunk | real nDCG@5 |
+|---|---|---|---|---|---|---|
+| v1 @ 4,000 | 0.935 | 0.448 | 0.736 | 0.453 | 0.426 | 0.702 |
+| v1 @ 1,500 | +0.018 ▲ | +0.138 ▲ | +0.001 | +0.052 ▲ | +0.039 | +0.011 |
+| **v2 bf16 + prefixes @ 4,000 (production)** | −0.000 | +0.035 ▲ | +0.010 | +0.061 ▲ | +0.106 ▲ | +0.026 |
+| **v2 bf16 + prefixes @ 1,500** | +0.008 | **+0.153 ▲** | +0.018 | **+0.120 ▲** | **+0.180 ▲** | **+0.052** |
+
+At 1,500 characters v2 improves on the current production setting everywhere: buried +0.117, detail +0.058, multi-chunk +0.074 and real queries +0.025, at no cost to topic or gist. The cost is 2.4× the vectors (2,656 vs 1,095) and a 2-minute re-embed. **Not applied: it is the owner's call.** It is one line in `server/models.js` (`chunkChars`), and the vector-space id makes the re-embed automatic.
+
+The same effect explains why the long-window models (nomic, granite-r2, 8K tokens, used at 4,000-char chunks) did worst on facts.
+
+### Built-in engine bake-off
+
+Nine in-process models (transformers.js on onnxruntime-node, CPU), each at its own window and pooling:
+
+| MRR (Δ vs v1) | topic | buried | gist | detail | multi | real | size | full index* | RSS |
+|---|---|---|---|---|---|---|---|---|---|
+| MiniLM-L6 @ 4,000 (**old default**) | −0.010 | **−0.166 ▼** | −0.080 ▼ | **−0.115 ▼** | −0.044 | −0.039 | 87 MB | n/a | n/a |
+| **MiniLM-L6 q8 @ 700 (new default)** | +0.010 | **+0.205 ▲** | −0.097 ▼ | +0.077 ▲ | +0.126 ▲ | ≈ +0.0 | **23 MB** | **0.7 min** | **0.25 GB** |
+| bge-small @ 1,500 | −0.035 ▼ | +0.105 ▲ | −0.042 ▼ | +0.044 | +0.068 | −0.017 | 34 MB | 0.7 min | 0.3 GB |
+| arctic-embed-xs @ 1,500 | −0.042 ▼ | +0.081 ▲ | −0.014 | −0.039 | −0.021 | −0.006 | 23 MB | 0.7 min | 0.3 GB |
+| granite-embedding-30m @ 1,500 | −0.043 ▼ | +0.146 ▲ | −0.071 ▼ | +0.037 | +0.065 | −0.037 | 30 MB | 0.7 min | 0.3 GB |
+| granite-small-r2 @ 4,000 | −0.067 ▼ | −0.101 ▼ | −0.042 ▼ | −0.048 ▼ | −0.008 | −0.077 ▼ | 52 MB | n/a | n/a |
+| nomic-embed-text-v1.5 @ 4,000 | −0.055 ▼ | −0.098 ▼ | −0.037 ▼ | −0.076 ▼ | +0.003 | −0.043 | 137 MB | n/a | n/a |
+| **EmbeddingGemma ONNX q4** @ 4,000 | −0.007 | −0.021 ▼ | +0.010 | +0.015 | +0.060 | −0.005 | 197 MB | 9.4 min | 0.6–0.9 GB |
+| EmbeddingGemma ONNX q8 @ 4,000 | −0.003 | −0.013 | +0.009 | +0.025 ▲ | +0.076 ▲ | −0.011 | 309 MB | 13.2 min | 0.5–2.2 GB |
+
+\* One chunk per call, as production embeds, on an M1 Max CPU (`--ops-local`).
+
+- **The old built-in default was broken by its chunking, not its model.** At 4,000 characters MiniLM's 256-token window truncated 97% of chunks, embedding about a quarter of each. Sized to its window, the same model is the best fact-finder of all, Ollama included, and matches v1 on real queries.
+- **MiniLM q8 at 700 is the new default.** Measured against fp32, q8 is the same within noise on topic, buried, detail and multi-chunk, slightly lower on gist (−0.017), twice as fast and a quarter of the download. Its one weakness is broad "gist" queries.
+- **EmbeddingGemma ONNX works.** Driven through its own pooling and Dense head with its trained prompts, it matches Ollama v1 on every probe. The June attempt that skipped the head produced near-orthogonal vectors. It is offered as the built-in alternative for better topic search, but at 2 chunks/s on CPU it is not the default.
+- Query latency is negligible for all of them: 1–2 ms (MiniLM), 14 ms (EmbeddingGemma q4).
