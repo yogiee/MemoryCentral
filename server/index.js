@@ -177,7 +177,7 @@ server.tool(
     limit:       z.number().optional().describe('Max results (default 5)'),
   },
   async ({ description, limit = 5 }) => {
-    const embedResult = await embed(description);
+    const embedResult = await embed(description, { kind: 'query' });
 
     // Degraded mode: no query vector — return all content for in-context matching
     if (!embedResult.ok) {

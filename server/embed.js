@@ -1,15 +1,51 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
+import { homedir, cpus } from 'os';
+import { chunkText } from './chunk.js';
 
 const OLLAMA_BASE = (process.env.OLLAMA_HOST ?? 'http://localhost:11434').replace(/\/$/, '');
 
-// Tier-1 embedding model. Override via EMBED_MODEL.
-// embeddinggemma:300m chosen 2026-06-13 over nomic and the BenchLLAMA EMB winner
-// granite-embedding:30m (whose 512-token window truncated 66% of our memories).
-// emb-gemma: 768-dim (drop-in), clean retrieval to ~8k chars, beats nomic on every
-// discrimination metric on our corpus. Full rationale: docs/embedding-eval-2026-06-13.md.
-export const EMBED_MODEL = process.env.EMBED_MODEL ?? 'embeddinggemma:300m';
+// Tier-1 embedding model. Override via EMBED_MODEL. The default depends on where
+// Ollama runs, because the better model only exists as MLX:
+//
+//   Apple Silicon + local Ollama   embeddinggemma-2:270m-bf16-text
+//   everything else                embeddinggemma:300m (GGUF — Windows, Linux, Intel Mac)
+//
+// v2 bf16 chosen 2026-10-09 on our own A/B (docs/embedding-eval-2026-10-09.md): same
+// topic/gist recall as v1, +0.06-0.08 MRR on specific facts, and it settles at
+// 0.73 GB where v1 holds 2.37 GB for as long as it is loaded. Every embeddinggemma-2
+// tag is MLX, which Ollama runs only on Apple Silicon — so a default that ignored the
+// platform would hand Windows users a model that cannot load. A remote OLLAMA_HOST
+// gets the GGUF model too: we can't see the platform it runs on, and v1 runs anywhere.
+// v1 history: chosen 2026-06-13 over nomic and granite-embedding:30m
+// (docs/embedding-eval-2026-06-13.md).
+const OLLAMA_IS_LOCAL = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/.test(OLLAMA_BASE);
+// arch alone misreads an x64 Node running under Rosetta; the CPU name doesn't.
+export const APPLE_SILICON = process.platform === 'darwin' &&
+  (process.arch === 'arm64' || /Apple/.test(cpus()[0]?.model ?? ''));
+export const DEFAULT_EMBED_MODEL = APPLE_SILICON && OLLAMA_IS_LOCAL
+  ? 'embeddinggemma-2:270m-bf16-text'
+  : 'embeddinggemma:300m';
+export const EMBED_MODEL = process.env.EMBED_MODEL ?? DEFAULT_EMBED_MODEL;
+
+// What each model family needs on the wire. `prompts` = the task prefixes the model
+// was trained with (queries `task: search result | query: `, documents
+// `title: … | text: …`). They measurably help v2 and are mixed on v1, so v1 keeps
+// plain text — which also leaves every existing v1 table valid. v2 must send
+// num_ctx: without it Ollama cuts inputs over 8,192 tokens to 2,048 (BenchLLAMA
+// 2026-10-08). Unknown models (an EMBED_MODEL override) get plain text, no options.
+const PROFILES = [
+  { match: /^embeddinggemma-2:/, prompts: true, options: { num_ctx: 8192 } },
+];
+const PROFILE = PROFILES.find(p => p.match.test(EMBED_MODEL)) ?? { prompts: false };
+const QUERY_PREFIX = 'task: search result | query: ';
+
+// The id stored in embeddings.model, which find_similar filters on. It names the
+// vector SPACE, not just the weights: the same model with and without prompt
+// prefixes produces vectors that don't compare, so prompted vectors carry a
+// convention suffix. Changing the convention later means bumping it, and the
+// backlog then sees every old vector as stale (it keys on this id).
+const VECTOR_SPACE = PROFILE.prompts ? `${EMBED_MODEL}#prompts-v1` : EMBED_MODEL;
 
 // Ollama model used by extractProjectMeta() to derive project description + stack
 // tags during sync. Manual pin (not leaderboard-selected), but constrained by the
@@ -104,7 +140,18 @@ function resolveProvider() {
 // The model every stored vector must match under the active provider. The
 // pending-embedding backlog is defined against this (see backlog.js).
 export function activeModel() {
-  return EMBED_PROVIDER === 'local' ? LOCAL_MODEL : EMBED_MODEL;
+  return EMBED_PROVIDER === 'local' ? LOCAL_MODEL : VECTOR_SPACE;
+}
+
+// Frames text the way the active model expects. `query` is a search string;
+// `document` is a chunk body plus its memory's title. Without a kind the text
+// passes through untouched (provider probes). The plain document form is
+// chunk.js's own, so a model without prompts embeds exactly what it always did.
+function frame(text, { kind, title } = {}) {
+  const prompts = EMBED_PROVIDER !== 'local' && PROFILE.prompts;
+  if (kind === 'query') return prompts ? QUERY_PREFIX + text : text;
+  if (kind === 'document') return prompts ? `title: ${title || 'none'} | text: ${text}` : chunkText(title, text);
+  return text;
 }
 
 // Abort budget for one embed call. Raised 10s -> 30s on 2026-08-28 after the
@@ -134,8 +181,10 @@ export const EMBED_TIMEOUT_MS = Number(process.env.EMBED_TIMEOUT_MS) || 30_000;
 // GPU contention itself.
 //
 // Sent per request rather than via the server-wide OLLAMA_KEEP_ALIVE, which
-// would also pin the 8.5 GB extract model in memory. This one is 673 MB — cheap
-// to keep, and it is the model on the hot path.
+// would also pin the extract model in memory. The embedder is the model on the
+// hot path, and it is cheap to keep: v2 bf16 settles at 0.73 GB. v1 is not as
+// cheap — llama.cpp keeps the buffers it grew for the longest input, so it holds
+// ~2.4 GB for the whole keep-alive (measured 2026-10-09).
 export const EMBED_KEEP_ALIVE = process.env.EMBED_KEEP_ALIVE ?? '30m';
 
 // Carries a machine-readable reason alongside the human message, so callers can
@@ -162,7 +211,10 @@ async function ollamaEmbed(text) {
     res = await fetch(`${OLLAMA_BASE}/api/embed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: EMBED_MODEL, input: text, truncate: true, keep_alive: EMBED_KEEP_ALIVE }),
+      body: JSON.stringify({
+        model: EMBED_MODEL, input: text, truncate: true, keep_alive: EMBED_KEEP_ALIVE,
+        ...(PROFILE.options && { options: PROFILE.options }),
+      }),
       signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
     });
   } catch (err) {
@@ -195,7 +247,7 @@ async function ollamaEmbed(text) {
   if (!embeddings?.[0]?.length) {
     throw new EmbedError('bad_response', `Ollama returned no vector for ${EMBED_MODEL}`);
   }
-  return { vector: embeddings[0], model: EMBED_MODEL };
+  return { vector: embeddings[0], model: VECTOR_SPACE };
 }
 
 // ── Provider "local": @huggingface/transformers (no service required) ───────
@@ -237,8 +289,12 @@ async function localEmbed(text) {
 //   bad_response      2xx with no usable vector
 //   local_load_failed transformers.js could not load the model
 //   unexpected        anything not anticipated here — still reported, never eaten
-export async function embed(text) {
-  const input = String(text).slice(0, EMBED_MAX_CHARS);
+//
+// `opts.kind` is 'query' (find_similar) or 'document' (a chunk body, with
+// `opts.title`) — see frame(). Queries and documents must be framed by the same
+// convention or they land in different spaces, so every caller states which it is.
+export async function embed(text, opts) {
+  const input = frame(String(text), opts).slice(0, EMBED_MAX_CHARS);
   try {
     const { vector, model } = EMBED_PROVIDER === 'local' ? await localEmbed(input) : await ollamaEmbed(input);
     return { ok: true, vector, model };

@@ -183,13 +183,14 @@ Restores all memory files and rebuilds the database automatically.
 
 ### Tier 1 — Ollama (recommended)
 
-If [Ollama](https://ollama.com) is running with `embeddinggemma:300m` installed, it's used automatically. Ollama can be local or on another machine on your network.
+If [Ollama](https://ollama.com) is running, it's used automatically. Ollama can be local or on another machine on your network. The default model depends on the platform, because the better model is only published as MLX:
 
-```bash
-ollama pull embeddinggemma:300m
-```
+| Where Ollama runs | Default model | Pull |
+|---|---|---|
+| Apple Silicon Mac (local Ollama) | `embeddinggemma-2:270m-bf16-text` | `ollama pull embeddinggemma-2:270m-bf16-text` |
+| Windows, Linux, Intel Mac, or any remote `OLLAMA_HOST` | `embeddinggemma:300m` | `ollama pull embeddinggemma:300m` |
 
-Highest quality embeddings, runs entirely offline, zero API cost. embeddinggemma stays accurate on long memories (clean retrieval to ~8k characters), so MemoryCentral embeds up to 6000 characters per memory. Override the model with `EMBED_MODEL` and the input cap with `EMBED_MAX_CHARS`. Switching models requires re-embedding: `node server/reembed.js`.
+Highest quality embeddings, runs entirely offline, zero API cost. Memories are embedded as overlapping ~4,000-character chunks, so long memories are searchable end to end. On Apple Silicon, `embeddinggemma-2` finds specific facts noticeably better and uses about a third of the memory (`docs/embedding-eval-2026-10-09.md`). Override the model with `EMBED_MODEL`. Switching models requires re-embedding: `node server/reembed.js`.
 
 **Remote Ollama:** set `OLLAMA_HOST` in the MCP server config in `~/.claude.json`:
 

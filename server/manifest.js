@@ -81,8 +81,12 @@ export function buildManifest(generatedISO) {
     ],
     // Human prose only — not machine-parsed (gaps[] supersedes it for the backlog).
     rationale: {
-      embed: 'requirements-fit: embeddinggemma:300m == rankings.embedding_long[0]. Short-battery ' +
-             'and efficiency (quality/GB) winners both = granite-embedding:30m, which fails us.',
+      embed: 'requirements-fit, platform-dependent. Apple Silicon: embeddinggemma-2:270m-bf16-text ' +
+             'with prompt prefixes + num_ctx 8192, chosen 2026-10-09 on our own chunk-faithful A/B ' +
+             '(docs/embedding-eval-2026-10-09.md): topic/gist tie with v1, +0.06-0.08 MRR on specific ' +
+             'facts, settles at 0.73 GB vs v1 holding 2.37 GB. bf16 over the nvfp4 default tag: quality ' +
+             'tie, nvfp4 18% slower on M1 and peaks 0.4 GB higher. Elsewhere (all v2 tags are MLX): ' +
+             'embeddinggemma:300m. granite-embedding:30m fails us (512-tok window).',
       extract: 'granite4.2:3b pinned 2026-09-23 for residency: 2.6 GB vs gemma4:e4b-mlx 9.4 GB ' +
                '(MLX, weights-bound — no call setting shrinks it). Requires num_ctx 4096 + ' +
                'think:false, both sent; without them granite is 13.3 GB and thinks past the 60s ' +

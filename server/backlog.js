@@ -49,7 +49,9 @@ export async function embedMemory(db, mem) {
 
   const embedded = [];
   for (const chunk of chunks) {
-    const result = await embed(chunk.text); // embed() applies EMBED_MAX_CHARS
+    // The body alone: embed() frames it with the title for the active model.
+    const body = String(mem.content).slice(chunk.start, chunk.end);
+    const result = await embed(body, { kind: 'document', title: mem.title }); // applies EMBED_MAX_CHARS
     if (!result.ok) return result;
     embedded.push({ ...chunk, vector: result.vector, model: result.model });
   }

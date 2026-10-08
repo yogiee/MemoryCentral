@@ -40,7 +40,7 @@ const BOUNDARIES = [
 ];
 
 // The exact text embed() receives for a chunk. Title first — see above.
-const chunkText = (title, body) => (title ? `${title}\n\n${body}` : body);
+export const chunkText = (title, body) => (title ? `${title}\n\n${body}` : body);
 
 // Identifies the precise text a stored vector was built from. Covers the title
 // as well as the content because the title is part of every chunk's embed text:
