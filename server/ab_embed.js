@@ -433,7 +433,52 @@ async function ops() {
 
 // ── Run ──────────────────────────────────────────────────────────────────────
 
+// In-Node engine, measured the way production runs it: one chunk per call, in a
+// fresh process per model, so load time and memory belong to that model alone.
+// RSS is the whole Node process — the engine lives inside MemoryCentral's server.
+async function opsLocalWorker(key) {
+  const rssGB = () => process.memoryUsage().rss / 1e9;
+  const base = rssGB();
+  let t = Date.now();
+  const { run } = await loadLocal(key);
+  const loadSecs = (Date.now() - t) / 1000;
+  const loaded = rssGB();
+  const spec = MODELS[key];
+  const fmt = spec.doc ?? docPlain;
+  const chunks = memories.flatMap(m => chunksFor(key, m).map(c => fmt(m.title, m.content.slice(c.start, c.end))));
+  const sample = chunks.filter((_, i) => i % Math.ceil(chunks.length / 120) === 0);
+  let peak = loaded;
+  const sampler = setInterval(() => { peak = Math.max(peak, rssGB()); }, 100);
+  t = Date.now();
+  for (const c of sample) await run([c]);
+  const chunkPs = sample.length / ((Date.now() - t) / 1000);
+  const qs = probes['authored:gist'].slice(0, 50).map(x => (spec.query ?? '') + x.q);
+  const lat = [];
+  for (const q of qs) { const s = process.hrtime.bigint(); await run([q]); lat.push(Number(process.hrtime.bigint() - s) / 1e6); }
+  clearInterval(sampler);
+  lat.sort((a, b) => a - b);
+  await new Promise(r => setTimeout(r, 3000));
+  console.log(JSON.stringify({ key, loadSecs, baseGB: base, loadedGB: loaded, peakGB: peak, settledGB: rssGB(),
+    chunkPs, fullIndexMin: chunks.length / chunkPs / 60, chunks: chunks.length, p50: lat[lat.length >> 1], p95: lat[Math.floor(lat.length * 0.95)] }));
+}
+
+async function opsLocal() {
+  const keys = argVal('--models', LOCAL_KEYS.join(',')).split(',');
+  const { execFileSync } = await import('child_process');
+  console.log('═══ IN-NODE ENGINE (fresh process per model; one chunk per call, as production embeds) ═══');
+  console.log('model         load    RSS loaded  RSS peak  settled  chunks/s  full index   query p50/p95');
+  for (const key of keys) {
+    const out = execFileSync(process.execPath, [fileURLToPath(import.meta.url), '--ops-local-worker', key], { encoding: 'utf8', maxBuffer: 1 << 24 });
+    const r = JSON.parse(out.trim().split('\n').pop());
+    console.log(key.padEnd(14) + `${r.loadSecs.toFixed(1)}s`.padEnd(8) + `${r.loadedGB.toFixed(2)} GB`.padEnd(12) + `${r.peakGB.toFixed(2)} GB`.padEnd(10) +
+      `${r.settledGB.toFixed(2)}`.padEnd(9) + r.chunkPs.toFixed(1).padEnd(10) + `${r.fullIndexMin.toFixed(1)} min (${r.chunks})`.padEnd(13) +
+      `${r.p50.toFixed(0)}/${r.p95.toFixed(0)} ms`);
+  }
+}
+
 if (arg('--ops')) { await ops(); process.exit(0); }
+if (argVal('--ops-local-worker')) { await opsLocalWorker(argVal('--ops-local-worker')); process.exit(0); }
+if (arg('--ops-local')) { await opsLocal(); process.exit(0); }
 
 console.log(`Corpus ${corpusHash}: ${memories.length} memories → ${memories.reduce((s, m) => s + m.chunks.length, 0)} chunks`);
 console.log(`Probes: ${Object.entries(probes).map(([k, v]) => `${k}=${v.length}`).join(' · ')} · real=${real.length} (${Object.keys(judgments).length} judged)\n`);
