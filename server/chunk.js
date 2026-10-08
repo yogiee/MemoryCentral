@@ -16,9 +16,12 @@
 
 import { createHash } from 'crypto';
 
-// Body chars per chunk. Deliberately well under embed.js's EMBED_MAX_CHARS
-// (6000) so the title prefix can never push a chunk back into truncation — the
-// exact failure this module exists to remove.
+// Default body chars per chunk, sized for the Ollama embedders (2,048-8,192-token
+// windows): deliberately well under embed.js's EMBED_MAX_CHARS (6000) so the
+// title prefix can never push a chunk back into truncation — the exact failure
+// this module exists to remove. Models with smaller windows pass their own size
+// (chunkMemory's opts): a 256-token model fed this default silently loses ~3/4
+// of every chunk, which is what the in-Node MiniLM did until 2026-10-09.
 export const CHUNK_CHARS = Number(process.env.EMBED_CHUNK_CHARS) || 4000;
 
 // Trailing chars of each chunk repeated at the head of the next. Clamped to half
@@ -53,8 +56,8 @@ export function embedHash(title, content) {
 // Best cut position in [start, hardEnd), preferring the most structural
 // boundary available. Falls back to hardEnd for content with no line breaks at
 // all (a single pasted blob), which still terminates — it just cuts mid-line.
-function cutPoint(content, start, hardEnd) {
-  const floor = start + Math.floor(CHUNK_CHARS * MIN_FILL);
+function cutPoint(content, start, hardEnd, chunkChars) {
+  const floor = start + Math.floor(chunkChars * MIN_FILL);
   const window = content.slice(start, hardEnd);
   for (const { re, at } of BOUNDARIES) {
     re.lastIndex = 0;
@@ -72,16 +75,20 @@ function cutPoint(content, start, hardEnd) {
 // Returns [{ index, start, end, text }] covering the whole content. `start`/`end`
 // are char offsets into `content` (not into `text`, which carries the title
 // prefix) so callers can quote the passage a chunk actually matched on.
-export function chunkMemory(title, content) {
+//
+// opts.chunkChars / opts.overlap size the chunks for a particular model; the
+// overlap defaults to the same 10% ratio as CHUNK_OVERLAP/CHUNK_CHARS.
+export function chunkMemory(title, content, { chunkChars = CHUNK_CHARS, overlap: wantOverlap } = {}) {
   const body = String(content);
-  const overlap = Math.min(CHUNK_OVERLAP, Math.floor(CHUNK_CHARS / 2));
+  const scaled = wantOverlap ?? (chunkChars === CHUNK_CHARS ? CHUNK_OVERLAP : Math.round(chunkChars * CHUNK_OVERLAP / CHUNK_CHARS));
+  const overlap = Math.min(scaled, Math.floor(chunkChars / 2));
   const chunks = [];
   let start = 0;
 
   while (start < body.length) {
-    const end = body.length - start <= CHUNK_CHARS
+    const end = body.length - start <= chunkChars
       ? body.length
-      : cutPoint(body, start, start + CHUNK_CHARS);
+      : cutPoint(body, start, start + chunkChars, chunkChars);
 
     chunks.push({ index: chunks.length, start, end, text: chunkText(title, body.slice(start, end)) });
     if (end >= body.length) break;
