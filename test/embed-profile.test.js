@@ -119,5 +119,5 @@ test('a built-in model is chunked to its own window, and its vector space says s
   const cfg = E.activeConfig();
   assert.equal(cfg.provider, 'local');
   assert.ok(cfg.chunkChars < 1000, 'MiniLM reads 256 tokens; 4,000-char chunks would lose most of each one');
-  assert.equal(cfg.space, `all-MiniLM-L6-v2#c${cfg.chunkChars}`, 'differs from the old truncating space, so old vectors re-embed');
+  assert.equal(cfg.space, `all-MiniLM-L6-v2#q8#c${cfg.chunkChars}`, 'differs from the old truncating space, so old vectors re-embed');
 });
