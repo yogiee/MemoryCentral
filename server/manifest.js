@@ -13,7 +13,7 @@
 import { writeFileSync, mkdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { EMBED_MODEL, EXTRACT_MODEL } from './embed.js';
+import { EMBED_MODEL } from './embed.js';
 
 const CONSUMER      = 'memoryCentral';
 const MANIFEST_DIR  = join(homedir(), '.config', 'ollama-consumers');
@@ -50,13 +50,6 @@ export function buildManifest(generatedISO) {
       basis: 'embedding_long',
       tier: 'primary',
     },
-    // sync-time project description + stack-tag JSON extraction. capability "manual": a
-    // deliberate quality pin, not leaderboard-selected → protected, never drop-evaluated.
-    extract: {
-      model: EXTRACT_MODEL,
-      capability: 'manual',
-      tier: 'primary',
-    },
   };
 
   return {
@@ -87,12 +80,12 @@ export function buildManifest(generatedISO) {
              'facts, settles at 0.73 GB vs v1 holding 2.37 GB. bf16 over the nvfp4 default tag: quality ' +
              'tie, nvfp4 18% slower on M1 and peaks 0.4 GB higher. Elsewhere (all v2 tags are MLX): ' +
              'embeddinggemma:300m. granite-embedding:30m fails us (512-tok window).',
-      extract: 'granite4.2:3b pinned 2026-09-23 for residency: 2.6 GB vs gemma4:e4b-mlx 9.4 GB ' +
-               '(MLX, weights-bound — no call setting shrinks it). Requires num_ctx 4096 + ' +
-               'think:false, both sent; without them granite is 13.3 GB and thinks past the 60s ' +
-               'Stop-hook budget. Real payloads, all 27 projects: 0 failures, median 1.6s (e4b ' +
-               '2.4s), descriptions comparable. Prior pins: e4b-mlx (2026-08-23), gemma4:latest ' +
-               'and llama3.1:latest (both died by silent 404 after uninstall).',
+      // Kept so BenchLLAMA's history reads right: granite4.2:3b leaving models_in_use is
+      // deliberate, not drift — it may now be dropped from the fleet as far as we care.
+      extract: 'Removed 2026-10-09. Project name, description and stack now come from a ' +
+               'declarative "## MemoryCentral" block in each project\'s instructions file ' +
+               '(server/projectBlock.js); no model is called. granite4.2:3b (the last extract ' +
+               'pin) is no longer used by MemoryCentral.',
     },
   };
 }

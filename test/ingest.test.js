@@ -267,3 +267,25 @@ test('a pre-2026-10-09 index migrates in place: rows keep their ids and vectors'
   assert.equal(db.prepare('SELECT COUNT(*) n FROM embeddings WHERE memory_id=41').get().n, 1, 'vector survived');
   assert.equal(tombs().length, 0);
 });
+
+test('a backup round-trips every memory, including ones whose folder is gone', async () => {
+  const { exportBackup, importBackup } = await import('../server/backup.js');
+  const { mem } = claudeProject('app', files(2));
+  await sync();
+  await mods.saveMemory(db, { project: 'native-only', filename: 'n.md', content: 'native', embed: false });
+  rmSync(join(mem, '..'), { recursive: true, force: true }); // folder gone: exists only in the index now
+  await sync();
+  const backup = JSON.parse(JSON.stringify(exportBackup(db)));
+  assert.equal(backup.memories.length, 3);
+
+  // A fresh machine: empty data root, no Claude folders.
+  db.close();
+  rmSync(home, { recursive: true, force: true });
+  db = mods.openDb();
+  const r = importBackup(db, backup);
+  assert.equal(r.restored, 3);
+  assert.equal(r.toStore, 3, 'the vanished folder\'s memories (and the native one) land in the store');
+  await sync();
+  assert.equal(live('app').length, 2);
+  assert.equal(live('native-only').length, 1);
+});

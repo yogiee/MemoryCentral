@@ -47,68 +47,6 @@ const QUERY_PREFIX = 'task: search result | query: ';
 // backlog then sees every old vector as stale (it keys on this id).
 const VECTOR_SPACE = PROFILE.prompts ? `${EMBED_MODEL}#prompts-v1` : EMBED_MODEL;
 
-// Ollama model used by extractProjectMeta() to derive project description + stack
-// tags during sync. Manual pin (not leaderboard-selected), but constrained by the
-// EXTRACT_TIMEOUT_MS budget below — this call sits on the Stop hook, and re-runs
-// whenever a project's memory content drifts, so it is NOT the rare event the old
-// "accuracy over speed" note assumed. Measured on the real 3000-char payload:
-// gemma4:12b 82.1s, gemma4:12b-mlx 30.3s, gemma4:e4b-mlx 24.2s. The #1 worker is
-// unusable here regardless of its scores; e4b-mlx is workers #5 with the same
-// instruction_adherence (1.0) and clears the budget with room to spare.
-// Note the stack tags mostly don't depend on this — a project's `## Stack` block in
-// CLAUDE.md wins when present (see refreshProjectMeta), so in practice the model
-// supplies the description and little else.
-// Pinned 2026-09-23 to granite4.2:3b, replacing gemma4:e4b-mlx for residency: e4b
-// holds ~9.4 GB whatever its settings (MLX, weights-bound), enough to evict other
-// models at session end. granite4.2:3b is 2.6 GB — but ONLY with EXTRACT_NUM_CTX
-// and EXTRACT_THINK below. Without them it pre-allocates 13.3 GB and thinks for
-// 24-85s, past the budget. Measured on all 27 projects' real payloads (same call,
-// both models): granite 0 failures, 0.9-3.2s (median 1.6s) vs e4b 1.1-5.2s (2.4s);
-// descriptions comparable. It dumped the whole tag allowlist once (see
-// MAX_STACK_TAGS). e4b's tags were slightly better on projects with no `## Stack`.
-// History: gemma4:latest (2026-08-23 → uninstalled, 404'd silently) and before it
-// llama3.1:latest (2026-06-15, same death). Verify this tag still resolves before
-// trusting a sync's extracted metadata.
-// Centralized + exported so the consumer manifest (manifest.js) reports one source of truth.
-export const EXTRACT_MODEL = process.env.EXTRACT_MODEL ?? 'granite4.2:3b';
-
-// Abort budget for one extraction. Raised 30s → 60s on 2026-08-23: the pinned model
-// needs ~24s on a real corpus, and 30s left only 19% headroom — thin enough that a
-// busy GPU or a larger memory set silently returned null and looked like a dead pin.
-// Keep the pin comfortably inside this; if a candidate needs more, it's the wrong
-// model for a hook that runs at session end, not a reason to raise the ceiling.
-export const EXTRACT_TIMEOUT_MS = Number(process.env.EXTRACT_TIMEOUT_MS ?? 60_000);
-
-// Context window for the extract call. Without it Ollama allocates the model's full
-// native window (131k-262k), which pre-sizes a GGUF model's KV cache to 13-32 GB for a
-// prompt that is ~1k tokens (3000-char slice + instructions). 4096 leaves ~3x headroom.
-// MLX models allocate lazily, so this doesn't shrink gemma4:e4b-mlx (its ~9.4 GB is
-// weights) — it's what makes a small GGUF pin viable. BenchLLAMA probe, 2026-09-23.
-export const EXTRACT_NUM_CTX = Number(process.env.EXTRACT_NUM_CTX ?? 4096);
-
-// Thinking is off for extraction. Thinking-capable models default to on: e4b spent
-// 566-833 tokens (9-15s) reasoning before a ~50-token JSON answer, with no quality
-// gain; others (qwen3.5:4b-mlx, granite4.2:3b) think past EXTRACT_TIMEOUT_MS.
-// Non-thinking models ignore think:false.
-export const EXTRACT_THINK = false;
-
-// Closed vocabulary for project stack tags. Used both to prompt the extractor and to
-// post-filter its output — no model reliably respects an in-prompt allowlist, so we
-// enforce it here. Keep in sync with find_by_stack expectations.
-export const STACK_TAGS = [
-  'swift', 'swiftui', 'node', 'typescript', 'python', 'react', 'electron',
-  'bash', 'homeassistant', 'go', 'rust', 'wordpress', 'html', 'css',
-];
-
-// A stack longer than this is the model reciting the allowlist, not describing a
-// project — the allowlist filter can't catch that, since every tag is valid.
-// granite4.2:3b returned all 14 for WallP; llama3.2:3b did the same in BenchLLAMA's
-// probe. An honest stack tops out around 7 (an Electron app: node, typescript, react,
-// electron, html, css, bash); past 9 it spans unrelated ecosystems (swift + go +
-// wordpress…). Such a stack is dropped to [] — no tags beats wrong ones. Only
-// model-extracted stacks pass through here; a `## Stack` block is never capped.
-export const MAX_STACK_TAGS = 9;
-
 // Max input chars per embed. Raised 2000→6000 with the emb-gemma switch — sits inside
 // emb-gemma's clean ~8k-char (2048-tok) window, capturing long-memory body content that
 // the old 2000 cap truncated away. Centralized here so all callers stay consistent.
@@ -157,9 +95,9 @@ function frame(text, { kind, title } = {}) {
 // Abort budget for one embed call. Raised 10s -> 30s on 2026-08-28 after the
 // cold-start hypothesis (defect 4 of the backlog-gaps report) was finally
 // measured rather than assumed. Worst observed case, repeated: an embed issued
-// while gemma4:e4b-mlx (8.5 GB, the EXTRACT_MODEL until 2026-09-23) is cold-loading — which is
-// exactly what a sync does, since refreshProjectMeta and the embed pass run in
-// the same run — takes 4.4-5.3s against the old 10s budget.
+// while gemma4:e4b-mlx (8.5 GB, then the sync-time extraction model) is
+// cold-loading — which is exactly what a sync did, since extraction and the embed
+// pass ran in the same run — takes 4.4-5.3s against the old 10s budget.
 //
 //   embedder warm, GPU idle                       50-205ms
 //   embedder cold, GPU idle                       ~1.2s
@@ -167,7 +105,7 @@ function frame(text, { kind, title } = {}) {
 //   embedder cold,     big model cold-loading     4.4-5.3s   <- the budget case
 //
 // 1.9x headroom on an idle machine is thin by this project's own standard: the
-// same reasoning raised EXTRACT_TIMEOUT_MS off 30s, where 19% headroom let a
+// same reasoning raised the extraction budget off 30s, where 19% headroom let a
 // busy GPU look like a dead pin. 30s keeps ~6x. The cost of the larger budget is
 // bounded — embedMemory stops at its first failed chunk, and drainPending gives
 // up after 3 consecutive failures — and a genuinely absent provider still fails
@@ -233,8 +171,8 @@ async function ollamaEmbed(text) {
   }
 
   if (!res.ok) {
-    // A pulled-out model 404s here. That exact failure has now killed two
-    // EXTRACT_MODEL pins silently (llama3.1, gemma4:latest) and was read both
+    // A pulled-out model 404s here. That exact failure killed two pins of the
+    // old extraction model silently (llama3.1, gemma4:latest) and was read both
     // times as "Ollama isn't running" — name the tag and the fix instead.
     if (res.status === 404) {
       throw new EmbedError('model_missing', `${EMBED_MODEL} is not installed — ollama pull ${EMBED_MODEL}`);
@@ -314,70 +252,4 @@ export function cosineSimilarity(a, b) {
     mB  += b[i] * b[i];
   }
   return dot / (Math.sqrt(mA) * Math.sqrt(mB));
-}
-
-// Ollama-only: extract description + stack tags from memory content.
-// Returns { description, stack } or null if Ollama unavailable.
-export async function extractProjectMeta(content) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), EXTRACT_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: EXTRACT_MODEL,
-        messages: [
-          {
-            role: 'system',
-            content: 'You analyze software project memory files and output JSON metadata. Always respond with only valid JSON, no extra text.',
-          },
-          {
-            role: 'user',
-            content: `Read these project memory files and extract metadata. Respond with ONLY this JSON:
-{"description": "<one sentence about what this project actually does>", "stack": ["<real tech tags>"]}
-
-Valid tech tags: ${STACK_TAGS.join(', ')}
-
-Project memory files:
-${content.slice(0, 3000)}`,
-          },
-        ],
-        stream: false,
-        think: EXTRACT_THINK,
-        options: { temperature: 0, num_ctx: EXTRACT_NUM_CTX },
-      }),
-    });
-    clearTimeout(timeout);
-    if (!res.ok) {
-      // Name the model and the status. sync.js already warns on a null return, but only as
-      // "Ollama down or model missing" — ambiguous enough that two dead pins (llama3.1,
-      // then gemma4:latest) were read as "Ollama isn't running" and left alone for months.
-      // A 404 naming the tag is the difference between noise and an actionable line.
-      process.stderr.write(
-        `extractProjectMeta: ${EXTRACT_MODEL} returned HTTP ${res.status}` +
-        `${res.status === 404 ? ' — model not installed (ollama pull ' + EXTRACT_MODEL + ')' : ''}\n`
-      );
-      return null;
-    }
-    const data = await res.json();
-    const text = data?.message?.content || '';
-    const match = text.match(/\{[\s\S]*?\}/);
-    if (!match) return null;
-    const meta = JSON.parse(match[0]);
-    // Enforce the closed tag vocabulary — models leak out-of-allowlist tags (e.g.
-    // "postgres") and over-tag, so filter to known tags and de-dupe.
-    if (Array.isArray(meta.stack)) {
-      const allow = new Set(STACK_TAGS);
-      meta.stack = [...new Set(meta.stack.map(t => String(t).toLowerCase().trim()))].filter(t => allow.has(t));
-      if (meta.stack.length > MAX_STACK_TAGS) meta.stack = [];
-    } else {
-      meta.stack = [];
-    }
-    return meta;
-  } catch {
-    clearTimeout(timeout);
-    return null;
-  }
 }

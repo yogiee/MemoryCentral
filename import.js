@@ -1,70 +1,37 @@
 #!/usr/bin/env node
-// Restore Claude project memories from a backup created by export.js.
+// Restore a backup made by export.js (any version), then rebuild the index.
 // Usage: node import.js <backup-file.json.gz>
 //
-// SAME MACHINE (reinstall): encoded paths match — all memories restore automatically.
-// NEW MACHINE / NEW USER:   memories restore to the same encoded paths. Claude Code
-//                           will find them once you open the corresponding projects
-//                           from the same absolute paths. Check the manifest printed
-//                           below to see what projects are in the backup.
-import { writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
+// Each memory goes back to the folder it came from if that folder exists on this
+// machine, otherwise into MemoryCentral's own store — so nothing in the backup is
+// lost on a machine with a different layout. A file already present with the same
+// name is kept (it is this machine's current version).
+import { existsSync } from 'fs';
 import { gunzipSync } from 'zlib';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { openDb } from './server/db.js';
+import { importBackup, readBackupFile } from './server/backup.js';
+import { syncAll, formatSyncStats } from './server/ingest.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-const backupFile = process.argv[2];
-if (!backupFile) {
-  console.error('Usage: node import.js <backup-file.json.gz>');
+const file = process.argv[2];
+if (!file || !existsSync(file)) {
+  console.error(file ? `ERROR: File not found: ${file}` : 'Usage: node import.js <backup-file.json.gz>');
   process.exit(1);
 }
-if (!existsSync(backupFile)) {
-  console.error(`ERROR: File not found: ${backupFile}`);
-  process.exit(1);
-}
-
-const CLAUDE_PROJ = join(homedir(), '.claude', 'projects');
-
 let payload;
 try {
-  payload = JSON.parse(gunzipSync(readFileSync(backupFile)).toString('utf8'));
+  payload = readBackupFile(file, gunzipSync);
 } catch (err) {
   console.error(`ERROR: Could not read backup file: ${err.message}`);
   process.exit(1);
 }
 
-if (payload.version !== 1) {
-  console.error(`ERROR: Unsupported backup version: ${payload.version}`);
-  process.exit(1);
+const db = openDb();
+try {
+  console.log(`Backup from ${payload.created} (${payload.platform}), format v${payload.version}`);
+  const r = importBackup(db, payload);
+  console.log(`Restored ${r.restored} file(s); kept ${r.keptExisting} already present; ${r.toStore} placed in MemoryCentral's own store.\n`);
+  console.log(formatSyncStats(await syncAll(db)));
+  console.log('\n✓  Import complete.');
+} finally {
+  db.close();
 }
-
-console.log(`Backup from: ${payload.created} (${payload.platform})`);
-console.log(`Projects: ${Object.keys(payload.memories).length}\n`);
-console.log('Manifest:');
-for (const [encoded, name] of Object.entries(payload.manifest)) {
-  console.log(`  ${name.padEnd(24)} ← ${encoded}`);
-}
-console.log();
-
-let restored = 0;
-for (const [encodedPath, files] of Object.entries(payload.memories)) {
-  const memDir = join(CLAUDE_PROJ, encodedPath, 'memory');
-  mkdirSync(memDir, { recursive: true });
-  for (const [filename, content] of Object.entries(files)) {
-    writeFileSync(join(memDir, filename), content, 'utf8');
-    restored++;
-  }
-  const name = payload.manifest[encodedPath] || encodedPath;
-  console.log(`  ✓  ${name} (${Object.keys(files).length} files)`);
-}
-
-console.log(`\nRestored ${restored} files across ${Object.keys(payload.memories).length} projects.`);
-console.log('Running sync to rebuild the knowledge database...\n');
-
-await import(join(__dirname, 'server', 'sync.js'));
-
-console.log('\n✓  Import complete. Start a new Claude Code session to use the restored memories.');

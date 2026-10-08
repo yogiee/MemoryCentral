@@ -549,7 +549,10 @@ function renderMemoryDetail(mem) {
   eyebrow.appendChild(document.createTextNode(mem.project_name));
   head.appendChild(eyebrow);
   head.appendChild(el('h2', { 'class': 'detail-title' }, mem.filename));
-  var path = '~/.claude/projects/' + (mem.encoded_path || mem.project_name) + '/memory/' + mem.filename;
+  // The file the memory lives in, wherever its source is (an AI tool's memory
+  // folder, MemoryCentral's own store, a registered folder). null = the source
+  // folder is gone; the memory itself is kept in the index.
+  var path = mem.path || '(source folder no longer exists — kept in MemoryCentral)';
   head.appendChild(el('div', { 'class': 'detail-meta' },
     el('span', {}, el('b', {}, 'Modified'), relTime(mem.synced_at)),
     el('span', {}, el('b', {}, 'Size'), fmtSize(mem.size_bytes)),

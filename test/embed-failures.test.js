@@ -112,7 +112,7 @@ test('a failure never looks like a success, and always carries both fields', asy
 });
 
 // --- Cold-start budget (defect 4, measured 2026-08-28) ----------------------
-// The failure this guards: an embed issued while the 8.5 GB EXTRACT_MODEL is
+// The failure this guards: an embed issued while an 8.5 GB model (then the extraction pin) is
 // cold-loading measured 4.4-5.3s against the old 10s budget. Keeping the
 // embedder resident cuts that to ~370ms, and the wider budget covers the rest.
 test('the embedder is asked to stay resident, so cold loads are rare', async () => {

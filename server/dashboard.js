@@ -4,15 +4,14 @@ import { createServer } from 'http';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
-import { spawn } from 'child_process';
 import { openDb, ftsQuery } from './db.js';
 import { EMBED_PROVIDER, activeModel } from './embed.js';
 import { countPending } from './backlog.js';
+import { syncAll, formatSyncStats } from './ingest.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC   = join(__dirname, 'public');
 const ASSETS   = join(__dirname, 'assets');
-const SYNC_JS  = join(__dirname, '..', 'sync.js');
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -191,13 +190,18 @@ function getProjectMemories(db, name) {
 }
 
 function getMemory(db, id) {
-  return db.prepare(`
+  const m = db.prepare(`
     SELECT m.id, m.filename, m.memory_type, m.title, m.content, m.synced_at,
-           p.name AS project_name, p.encoded_path,
+           p.name AS project_name, s.kind AS source_kind,
+           s.root AS source_root,
            LENGTH(m.content) AS size_bytes
     FROM memories m JOIN projects p ON p.id = m.project_id
+    LEFT JOIN sources s ON s.id = m.source_id
     WHERE m.id=?
   `).get(id);
+  if (!m) return m;
+  const { source_root, ...rest } = m;
+  return { ...rest, path: source_root ? join(source_root, m.filename) : null };
 }
 
 // ---------------------------------------------------------------------------
@@ -353,13 +357,18 @@ function handleGet(req, res, port) {
   res.writeHead(404); res.end('Not found');
 }
 
-function handleSync(res) {
-  const proc = spawn(process.execPath, [SYNC_JS], { stdio: ['ignore', 'pipe', 'pipe'] });
-  let out = '';
-  proc.stdout.on('data', d => { out += d; });
-  proc.stderr.on('data', d => { out += d; });
-  proc.on('close', code => {
-    res.writeHead(code === 0 ? 200 : 500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: code === 0, output: out }));
-  });
+// Runs in this process under the shared sync lease, so a click while a harness's
+// server is mid-sync reports "busy" instead of racing it.
+async function handleSync(res) {
+  const db = openDb();
+  try {
+    const stats = await syncAll(db);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: !stats.skipped, output: formatSyncStats(stats), stats }));
+  } catch (err) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: false, output: String(err?.message || err) }));
+  } finally {
+    db.close();
+  }
 }
