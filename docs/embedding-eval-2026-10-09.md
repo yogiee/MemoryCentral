@@ -4,7 +4,7 @@
 **Author:** Claude (Opus 5.5) + Yogi
 **Status:** ✅ **Adopted 2026-10-09** on Apple Silicon: `embeddinggemma-2:270m-bf16-text` with prompt prefixes. Other platforms keep `embeddinggemma:300m`, because every v2 tag is MLX-only (`DEFAULT_EMBED_MODEL` in `server/embed.js`).
 **Trigger:** BenchLLAMA's 2026-10-08 EMB v3 run (`2026-10-08T14-46-14`). It found v2 ~3× lighter and better on STS, but worse than v1 at finding one buried fact in 1–2K-token text, which is where our chunks live. Its handoff is the `reference_benchllama_embeddinggemma2_findings_2026-10-08.md` memory.
-**Harness:** `server/ab_embed.js` (read-only; vectors cached in `stats/embed-ab/`). **Data:** `docs/embedding-ab-2026-10-09/` (`queries.json`, `real-queries.json`, `judgments.json`).
+**Harness:** `server/ab_embed.js` (read-only; vectors cached in `stats/embed-ab/`). **Data:** `queries.json`, `real-queries.json` and `judgments.json` in `~/.memorycentral/eval/embedding-ab-2026-10-09/`. These are built from the owner's private memories, so they are kept with the user's data, not in the repository. To reproduce on your own corpus, author your own query set and judgments in the same format.
 
 ---
 

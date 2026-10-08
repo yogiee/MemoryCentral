@@ -35,11 +35,14 @@ import { createHash } from 'crypto';
 import { execFileSync, spawn } from 'child_process';
 import { openDb } from './db.js';
 import { chunkMemory, CHUNK_CHARS } from './chunk.js';
+import { dataRoot } from './paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const CACHE = join(ROOT, 'stats', 'embed-ab');
-const DATA = join(ROOT, 'docs', 'embedding-ab-2026-10-09');
+// The query sets and relevance judgments are built from the user's own memories, so
+// they live with the user's data, never in the repository (MC_EVAL_DATA overrides).
+const DATA = process.env.MC_EVAL_DATA || join(dataRoot(), 'eval', 'embedding-ab-2026-10-09');
 const OLLAMA = (process.env.OLLAMA_HOST ?? 'http://localhost:11434').replace(/\/$/, '');
 const arg = f => process.argv.includes(f);
 const argVal = (f, dflt) => { const i = process.argv.indexOf(f); return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : dflt; };
