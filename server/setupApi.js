@@ -50,7 +50,7 @@ export async function ollamaCheck(host = DEFAULT_OLLAMA_HOST) {
 
 const configSummary = cfg => ({
   provider: cfg.provider, host: cfg.host, model: cfg.model, label: cfg.spec.label,
-  runnable: cfg.runnable, space: cfg.space, chunkChars: cfg.chunkChars,
+  runnable: cfg.runnable, stale: cfg.stale, space: cfg.space, chunkChars: cfg.chunkChars,
 });
 
 // What already exists on this machine that MemoryCentral will import.

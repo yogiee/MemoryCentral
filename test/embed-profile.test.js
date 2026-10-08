@@ -86,7 +86,7 @@ test('v2: queries and documents carry their task prefixes, and num_ctx is sent',
   assert.equal(sent[1].input, 'title: proxmox-notes | text: body text');
   assert.equal(sent[2].input, 'title: none | text: body text');
   assert.deepEqual(sent[0].options, { num_ctx: 8192 });
-  if (E.activeConfig().runnable) assert.equal(q.model, 'embeddinggemma-2:270m-bf16-text#prompts-v1');
+  if (E.activeConfig().runnable) assert.equal(q.model, 'embeddinggemma-2:270m-bf16-text#prompts-v1#c1500');
 });
 
 test('v1: plain text exactly as chunk.js frames it, no options, the same vector-space id as before', async () => {
@@ -98,7 +98,7 @@ test('v1: plain text exactly as chunk.js frames it, no options, the same vector-
   assert.equal(sent[0].input, 'cifs mount lessons');
   assert.equal(sent[1].input, chunkText('proxmox-notes', 'body text'));
   assert.equal(sent[0].options, undefined);
-  assert.equal(q.model, 'embeddinggemma:300m', 'existing v1 tables stay valid');
+  assert.equal(q.model, 'embeddinggemma:300m#c1500', 'the chunk size is part of the space, so a change re-embeds');
 });
 
 test('other v2 tags share the profile; unknown models get plain text', async () => {
@@ -120,4 +120,17 @@ test('a built-in model is chunked to its own window, and its vector space says s
   assert.equal(cfg.provider, 'local');
   assert.ok(cfg.chunkChars < 1000, 'MiniLM reads 256 tokens; 4,000-char chunks would lose most of each one');
   assert.equal(cfg.space, `all-MiniLM-L6-v2#q8#c${cfg.chunkChars}`, 'differs from the old truncating space, so old vectors re-embed');
+});
+
+test('a server on older code than the shared DB stops embedding instead of reverting it', async () => {
+  const { MODELS_REVISION } = M;
+  capture();
+  assert.ok((await E.embed('x')).ok);
+  assert.equal(E.activeConfig().stale, false);
+  set('embed.revision', MODELS_REVISION + 1); // a newer MemoryCentral has run against this DB
+  const r = await E.embed('x');
+  assert.equal(r.reason, 'stale_code');
+  set('embed.revision', MODELS_REVISION - 1); // older record: this code claims it
+  assert.ok((await E.embed('x')).ok);
+  assert.equal(JSON.parse(db.prepare("SELECT value FROM settings WHERE key='embed.revision'").get().value), MODELS_REVISION);
 });

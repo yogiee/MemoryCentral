@@ -404,7 +404,8 @@ async function renderSettingsView(container) {
       el('span', {}, 'Model'), el('span', {}, c.label + (c.runnable ? '' : ' — can\'t run on this machine')),
       el('span', {}, 'Index'), el('span', {}, status.index.memories + ' memories · ' +
         (status.index.pending ? status.index.pending + ' waiting for semantic indexing' : 'fully indexed'))),
-    !c.runnable ? notice('error', 'The configured model can\'t run here. Choose another with "Change…".') : null));
+    !c.runnable ? notice('error', 'The configured model can\'t run here. Choose another with "Change…".') : null,
+    c.stale ? notice('warn', 'This dashboard is running older MemoryCentral code than your index. Restart it (and reconnect MemoryCentral in your AI tools) so it can keep indexing.') : null));
 
   page.appendChild(extractPanel(status, function() { renderSettingsView(container); }));
 

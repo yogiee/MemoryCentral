@@ -1,10 +1,10 @@
 import { join } from 'path';
 import { chunkText, CHUNK_CHARS } from './chunk.js';
-import { getSetting } from './settings.js';
+import { getSetting, setSetting } from './settings.js';
 import { dataRoot } from './paths.js';
 import {
   ollamaSpec, localSpec, vectorSpace, canRunOllamaModel, recommendedOllamaModel,
-  DEFAULT_LOCAL_MODEL, DEFAULT_OLLAMA_HOST,
+  DEFAULT_LOCAL_MODEL, DEFAULT_OLLAMA_HOST, MODELS_REVISION,
 } from './models.js';
 
 // ── Which embedder, resolved per call ───────────────────────────────────────
@@ -55,8 +55,16 @@ export function activeConfig() {
     spec = ollamaSpec(env.EMBED_MODEL || setting('embed.ollama.model') || recommendedOllamaModel(host));
     runnable = canRunOllamaModel(spec.id, host);
   }
+  // Code-level revision check (models.js MODELS_REVISION). Newer code claims the
+  // shared DB; older code marks itself stale and stops embedding until restarted.
+  let stale = false;
+  if (settingsDb) {
+    const recorded = Number(setting('embed.revision') ?? 0);
+    if (MODELS_REVISION > recorded) { try { setSetting(settingsDb, 'embed.revision', MODELS_REVISION); } catch {} }
+    else if (MODELS_REVISION < recorded) stale = true;
+  }
   cached = {
-    provider, host, model: spec.id, spec, runnable,
+    provider, host, model: spec.id, spec, runnable, stale,
     space: vectorSpace(provider, spec),
     chunkChars: spec.chunkChars ?? CHUNK_CHARS,
   };
@@ -258,6 +266,7 @@ async function localEmbed(text, cfg) {
 //   http_error        any other non-2xx, with the response body
 //   bad_response      2xx with no usable vector
 //   model_unsupported the configured Ollama model can't run on this machine (MLX off Apple Silicon)
+//   stale_code        this process runs older code than the shared DB's embedding revision
 //   local_load_failed transformers.js could not load the model
 //   unexpected        anything not anticipated here — still reported, never eaten
 //
@@ -271,6 +280,10 @@ export async function embed(text, opts = {}) {
   const cfg = opts.config ?? activeConfig();
   const input = frame(String(text), opts, cfg.spec).slice(0, EMBED_MAX_CHARS);
   try {
+    if (cfg.stale) {
+      throw new EmbedError('stale_code',
+        'a newer MemoryCentral changed the embedding setup — restart (or reconnect) this app\'s MemoryCentral server');
+    }
     if (!cfg.runnable) {
       throw new EmbedError('model_unsupported',
         `${cfg.model} is an MLX model, which Ollama only runs on Apple Silicon — use ${recommendedOllamaModel(cfg.host)} here`);

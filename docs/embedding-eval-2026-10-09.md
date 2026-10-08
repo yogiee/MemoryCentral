@@ -178,7 +178,7 @@ Every chunk is a vector; a memory scores as its best chunk. Smaller chunks dilut
 | **v2 bf16 + prefixes @ 4,000 (production)** | −0.000 | +0.035 ▲ | +0.010 | +0.061 ▲ | +0.106 ▲ | +0.026 |
 | **v2 bf16 + prefixes @ 1,500** | +0.008 | **+0.153 ▲** | +0.018 | **+0.120 ▲** | **+0.180 ▲** | **+0.052** |
 
-At 1,500 characters v2 improves on the current production setting everywhere: buried +0.117, detail +0.058, multi-chunk +0.074 and real queries +0.025, at no cost to topic or gist. The cost is 2.4× the vectors (2,656 vs 1,095) and a 2-minute re-embed. **Not applied: it is the owner's call.** It is one line in `server/models.js` (`chunkChars`), and the vector-space id makes the re-embed automatic.
+At 1,500 characters v2 improves on the current production setting everywhere: buried +0.117, detail +0.058, multi-chunk +0.074 and real queries +0.025, at no cost to topic or gist. The cost is 2.4× the vectors (2,656 vs 1,095) and a 2-minute re-embed. **✅ Applied 2026-10-09 to both Ollama models** (`OLLAMA_CHUNK_CHARS` in `server/models.js`, `MODELS_REVISION` 2). v1 gains too (topic +0.018, buried +0.138, detail +0.052).
 
 The same effect explains why the long-window models (nomic, granite-r2, 8K tokens, used at 4,000-char chunks) did worst on facts.
 

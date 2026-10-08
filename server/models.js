@@ -16,6 +16,21 @@
 import { cpus } from 'os';
 import { CHUNK_CHARS } from './chunk.js';
 
+// Bump whenever a change here alters any vector space (a model's chunk size,
+// prompts, options, or a default). Every running server compares its revision with
+// the one recorded in the shared DB: a server on older code stops embedding (it
+// would otherwise re-embed the table back into the old space) and asks to be
+// restarted; a server on newer code records its revision and takes over.
+//   1  2026-10-09  platform table, built-in MiniLM-q8 @700
+//   2  2026-10-09  Ollama models chunked at 1,500 chars (was 4,000)
+export const MODELS_REVISION = 2;
+
+// Chunk size for the Ollama models. 1,500 beat 4,000 on every specific-fact probe and
+// on real queries for both embeddinggemma models, with topic and gist unchanged: one
+// vector summarising less text dilutes each fact less. Their windows (2K / 8K tokens)
+// are not the limit: a 1,500-char chunk is ~400 tokens (docs/embedding-eval-2026-10-09.md).
+const OLLAMA_CHUNK_CHARS = 1500;
+
 const GEMMA_QUERY = 'task: search result | query: ';
 const gemmaDoc = (title, body) => `title: ${title || 'none'} | text: ${body}`;
 
@@ -25,7 +40,7 @@ export const OLLAMA_MODELS = {
   // where v1's llama.cpp runner holds 2.37 GB. MLX-only, so Apple Silicon only.
   'embeddinggemma-2:270m-bf16-text': {
     label: 'EmbeddingGemma 2 (270M, bf16)', sizeMB: 574, mlx: true,
-    query: GEMMA_QUERY, doc: gemmaDoc, promptsTag: 'prompts-v1',
+    query: GEMMA_QUERY, doc: gemmaDoc, promptsTag: 'prompts-v1', chunkChars: OLLAMA_CHUNK_CHARS,
     // Without num_ctx Ollama cuts inputs over 8,192 tokens to 2,048 (BenchLLAMA 2026-10-08).
     options: { num_ctx: 8192 },
   },
@@ -33,7 +48,7 @@ export const OLLAMA_MODELS = {
   // granite-embedding:30m (docs/embedding-eval-2026-06-13.md). Plain text: prompts
   // were mixed on it, and plain keeps every existing v1 table valid.
   'embeddinggemma:300m': {
-    label: 'EmbeddingGemma (300M)', sizeMB: 621, mlx: false,
+    label: 'EmbeddingGemma (300M)', sizeMB: 621, mlx: false, chunkChars: OLLAMA_CHUNK_CHARS,
   },
 };
 

@@ -33,6 +33,7 @@ The message names the cause:
 | `model_unsupported` | An MLX-only model on a machine that can't run it | Settings → Change; only models that can run here are offered |
 | `timeout` | Ollama was slow, usually loading a model | It retries on its own |
 | `local_load_failed` | The built-in model couldn't be downloaded or loaded | Check the network, then Settings → Change → Download again |
+| `stale_code` | This app's MemoryCentral server runs older code than your index (after a `git pull`) | Restart the app or reconnect its MemoryCentral server; it refuses to embed so it can't undo the newer setup |
 
 Pending memories are embedded automatically once the cause is fixed: every server retries every minute. Keyword search (`search_memories`) is never affected.
 

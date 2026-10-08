@@ -139,6 +139,7 @@ Semantic search compares a query vector against the vectors of every memory chun
 - **Chunking** (`chunk.js`). Long memories are split at headings and paragraphs into overlapping chunks, sized to the model's context window. A memory scores as its best-matching chunk.
 - **Vector spaces.** Every vector is stored under an id naming its model, prompt convention and chunk size. Changing any of them makes every old vector stale, and the **backlog** (`backlog.js`) re-embeds them in the background. Search only ever compares vectors from the same space.
 - **Settings are re-read every 10 seconds**, so a change on the dashboard reaches every running server without a restart.
+- **Code-level changes** to the model table (chunk size, prompts, defaults) bump `MODELS_REVISION`. The newest revision that has run is recorded in the DB. A server still running older code stops embedding and asks to be restarted, rather than re-embedding the index back into the old vector space.
 
 The models were chosen by measurement on a real corpus. See [embedding-eval-2026-10-09.md](embedding-eval-2026-10-09.md).
 

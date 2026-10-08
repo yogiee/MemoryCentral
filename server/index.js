@@ -22,6 +22,7 @@ useSettingsDb(db);
 {
   const cfg = activeConfig();
   if (!cfg.runnable) console.error(`memoryCentral: ⚠ embedding model ${cfg.model} can't run on this machine — change it on the dashboard (http://localhost:9980) or set EMBED_MODEL`);
+  if (cfg.stale) console.error('memoryCentral: ⚠ a newer MemoryCentral changed the embedding setup — this server will not embed until it is restarted');
 }
 
 // Until setup is finished (engine chosen on the dashboard), say so where the user
