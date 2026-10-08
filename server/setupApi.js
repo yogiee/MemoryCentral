@@ -21,7 +21,7 @@ import { syncAll, formatSyncStats } from './ingest.js';
 import { ADAPTERS, scanSource } from './sources.js';
 import { connectSnippets } from './connect.js';
 import { suggestBlock, INSTRUCTION_FILES } from './projectBlock.js';
-import { confirmHeldRemovals, adoptSource, restoreTombstone, purgeTombstone, deleteMemory } from './store.js';
+import { confirmHeldRemovals, adoptSource, adoptOrphan, restoreTombstone, purgeTombstone, deleteMemory } from './store.js';
 import { dataRoot } from './paths.js';
 
 const SERVER_DIR = dirname(fileURLToPath(import.meta.url));
@@ -232,6 +232,13 @@ export function listSources(db) {
   `).all().map(s => ({ ...s, label: ADAPTERS[s.kind]?.label ?? s.kind }));
 }
 
+export function listOrphans(db) {
+  return db.prepare(`
+    SELECT m.id, m.filename, m.title, m.synced_at, p.name AS project FROM memories m
+    JOIN projects p ON p.id = m.project_id WHERE m.source_id IS NULL ORDER BY p.name, m.filename
+  `).all();
+}
+
 export function listTombstones(db) {
   return db.prepare(`
     SELECT t.id, t.filename, t.title, t.deleted_at, t.reason, p.name AS project, LENGTH(t.content) AS size
@@ -242,6 +249,7 @@ export function listTombstones(db) {
 export const retention = {
   confirm: (db, id) => confirmHeldRemovals(db, id),
   adopt: (db, id) => adoptSource(db, id),
+  adoptOrphan: (db, id) => adoptOrphan(db, id),
   restore: (db, id) => restoreTombstone(db, id),
   purge: (db, id) => purgeTombstone(db, id),
   deleteMemory: (db, body) => deleteMemory(db, body || {}),

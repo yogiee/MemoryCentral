@@ -443,6 +443,20 @@ async function renderSettingsView(container) {
           el('td', {}, action));
       })))));
 
+  var orphans = await apiFetch('/api/orphans');
+  if (orphans.length) page.appendChild(el('section', { class: 'ov-panel' },
+    el('div', { class: 'panel-head' }, el('div', { class: 'panel-title' }, 'Memories without a file'),
+      el('div', { class: 'panel-sub' }, orphans.length + ' kept in the index')),
+    el('p', { class: 'muted' }, 'These are in MemoryCentral but no folder holds their file any more — renamed or removed before MemoryCentral tracked sources, or by hand. They stay searchable until you decide.'),
+    el('table', { class: 'table' },
+      el('tbody', {}, orphans.map(function(m) {
+        return el('tr', {},
+          el('td', {}, m.project), el('td', { class: 'card-mono' }, m.filename), el('td', { class: 'muted' }, m.title),
+          el('td', {},
+            el('button', { class: 'btn btn-ghost btn-sm', onclick: async function() { var r = await apiPost('/api/orphans/' + m.id + '/adopt'); if (r.ok) renderSettingsView(container); else alert(r.reason); } }, 'Keep'),
+            el('button', { class: 'btn btn-ghost btn-sm', onclick: async function() { var r = await apiPost('/api/memory/delete', { project: m.project, filename: m.filename }); if (r.ok) renderSettingsView(container); } }, 'Delete')));
+      })))));
+
   var tombs = await apiFetch('/api/tombstones');
   page.appendChild(el('section', { class: 'ov-panel' },
     el('div', { class: 'panel-head' }, el('div', { class: 'panel-title' }, 'Recently deleted'),

@@ -122,6 +122,23 @@ export async function restoreTombstone(db, id, { embed = true } = {}) {
   return result;
 }
 
+// A memory no source holds (indexed before sources existed, its file since renamed
+// or removed by hand): give it a file again, in MemoryCentral's own store.
+export function adoptOrphan(db, id) {
+  const m = db.prepare(`
+    SELECT m.*, p.name AS project, p.repo_path FROM memories m JOIN projects p ON p.id = m.project_id
+    WHERE m.id=? AND m.source_id IS NULL
+  `).get(id);
+  if (!m) return { ok: false, reason: 'no such memory without a file' };
+  if (validFilename(m.filename)) return { ok: false, reason: `"${m.filename}" can't be a memory file — delete it instead` };
+  const root = ensureNativeProject(m.project, m.repo_path);
+  const path = join(root, m.filename);
+  if (existsSync(path)) return { ok: false, reason: `${m.filename} already exists in ${m.project}'s store` };
+  writeFileSync(path, m.content);
+  db.prepare('UPDATE memories SET source_id=? WHERE id=?').run(ensureSource(db, m.project_id, 'native', root).id, id);
+  return { ok: true, path };
+}
+
 export function purgeTombstone(db, id) {
   return { ok: Number(db.prepare('DELETE FROM memory_tombstones WHERE id=?').run(id).changes) === 1 };
 }

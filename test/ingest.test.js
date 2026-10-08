@@ -289,3 +289,18 @@ test('a backup round-trips every memory, including ones whose folder is gone', a
   assert.equal(live('app').length, 2);
   assert.equal(live('native-only').length, 1);
 });
+
+test('a memory with no file anywhere is kept until the user adopts or deletes it', async () => {
+  const { mem } = claudeProject('app', { 'a.md': 'alpha', 'b.md': 'beta' });
+  await sync();
+  db.prepare('UPDATE memories SET source_id=NULL WHERE filename=?').run('b.md'); // as if indexed before sources
+  unlinkSync(join(mem, 'b.md'));
+  await sync();
+  const orphan = live('app').find(r => r.filename === 'b.md');
+  assert.ok(orphan && orphan.source_id === null, 'kept, never tombstoned');
+  const r = mods.adoptOrphan(db, orphan.id);
+  assert.ok(r.ok && existsSync(r.path));
+  await sync();
+  assert.equal(live('app').length, 2);
+  assert.equal(db.prepare("SELECT s.kind FROM memories m JOIN sources s ON s.id=m.source_id WHERE m.filename='b.md'").get().kind, 'native');
+});

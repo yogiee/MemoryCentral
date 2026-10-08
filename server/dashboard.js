@@ -311,6 +311,7 @@ async function handleGet(req, res, port) {
   if (path === '/api/project-blocks') return withDb(db => setup.projectBlocks(db)).then(d => json(res, d));
   if (path === '/api/sources')        return withDb(db => setup.listSources(db)).then(d => json(res, d));
   if (path === '/api/tombstones')     return withDb(db => setup.listTombstones(db)).then(d => json(res, d));
+  if (path === '/api/orphans')        return withDb(db => setup.listOrphans(db)).then(d => json(res, d));
 
   // Icon assets
   if (path.startsWith('/assets/icons/')) {
@@ -438,6 +439,7 @@ async function handlePost(req, res) {
   if (path === '/api/memory/delete')   return withDb(db => setup.retention.deleteMemory(db, body)).then(r => json(res, r));
   if (/^\/api\/sources\/\d+\/confirm$/.test(path))    return withDb(db => setup.retention.confirm(db, id)).then(r => json(res, r));
   if (/^\/api\/sources\/\d+\/adopt$/.test(path))      return withDb(db => setup.retention.adopt(db, id)).then(r => json(res, r));
+  if (/^\/api\/orphans\/\d+\/adopt$/.test(path))      return withDb(db => setup.retention.adoptOrphan(db, id)).then(r => json(res, r));
   if (/^\/api\/tombstones\/\d+\/restore$/.test(path)) return withDb(db => setup.retention.restore(db, id)).then(r => json(res, r));
   if (/^\/api\/tombstones\/\d+\/purge$/.test(path))   return withDb(db => setup.retention.purge(db, id)).then(r => json(res, r));
   res.writeHead(404); res.end('Not found');
