@@ -76,7 +76,7 @@ export async function saveMemory(db, { project: name, filename, content, project
 
 // An AI tool describing a project it is working in. It knows the project better
 // than any extraction could, and it costs nothing — so this beats auto-extraction,
-// and only the project's own MemoryCentral block beats it (ingest.js).
+// and only the project's own `## Project` block beats it (ingest.js).
 // Returns { ok, overriddenBy? } — overriddenBy names the block that will win.
 export function setProjectInfo(db, { project: name, description, stack, projectPath = null }) {
   if (!String(name ?? '').trim()) return { ok: false, reason: 'project is required' };

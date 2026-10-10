@@ -54,7 +54,7 @@ export function ensureProject(db, name, { repoPath = null, kind = 'native', now 
   return db.prepare('SELECT * FROM projects WHERE name=?').get(name);
 }
 
-// A folder that moves to a different project (a block's `Project:` line renamed
+// A folder that moves to a different project (a block's `Name:` line renamed
 // it) takes its memories along; leaving them behind would split one project's
 // memories across two names.
 export function ensureSource(db, projectId, kind, root) {
@@ -187,7 +187,7 @@ function reconcile(db, { project, source, files, now, stats, toEmbed }) {
 }
 
 // Project metadata, highest precedence first:
-//   1. the project's own MemoryCentral block (or legacy `## Stack`), and a stack
+//   1. the project's own `## Project` block (or legacy `## Stack`), and a stack
 //      override set by the user
 //   2. what an AI tool set with set_project_info
 //   3. optional Ollama extraction (extract.js) — only when the user enabled it, and
@@ -302,7 +302,7 @@ async function runSync(db, { onProgress, embed, now }) {
   for (const [kind, adapter] of Object.entries(ADAPTERS)) {
     try {
       for (const d of adapter.discover(db)) {
-        // A block's `Project:` line names the project, overriding the folder-derived
+        // A block's `Name:` line names the project, overriding the folder-derived
         // name — the way two repos that are both called "app" are told apart.
         // Otherwise a folder we already know keeps its project's name: a better
         // path decoder (2026-10-09 resolved "Japan 2030" where the old one fell

@@ -1,17 +1,17 @@
-# The MemoryCentral project block
+# The project block
 
-A short block in a project's instructions file does two jobs:
-
-1. It tells **MemoryCentral** the project's name, description and stack.
-2. It tells **the AI tool working in that project** to use MemoryCentral. AI tools load their instructions file into every session.
+A short block in a project's instructions file tells MemoryCentral the project's name, description and stack:
 
 ```markdown
-## MemoryCentral
-Project: Billing Service
+## Project
+Name: Billing Service
 Description: Invoicing and payment reconciliation for the EU storefront.
 Stack: node, typescript, postgres, stripe
-Use: Before a feature, fix or research task, check MemoryCentral for prior work (find_similar with a one-line task; find_by_stack per Stack tag). Save decisions, fixes and gotchas with save_memory (project "Billing Service").
 ```
+
+Nothing in it is specific to MemoryCentral. It describes the project to any AI tool or person who opens the repository, whether or not they run MemoryCentral, so it's never dead weight in someone else's context.
+
+Telling the AI tool to *use* MemoryCentral isn't the block's job. MemoryCentral's server instructions do that ([usage.md](usage.md)), and they reach exactly the tools that have MemoryCentral connected.
 
 The dashboard has a prefilled block for every project (**Settings → Project blocks**), built from what MemoryCentral already knows.
 
@@ -30,14 +30,20 @@ MemoryCentral looks in that order and uses the first block it finds. If you use 
 
 ## Keys
 
-All keys are optional; unknown keys are ignored. Bullets and bold are fine (`- **Stack:** node`), but the colon is required.
+All keys are optional; unknown keys are ignored. Bullets and bold are fine (`- **Stack:** node`), but the colon is required. A `## Project` section with none of these keys is ordinary prose and is passed over.
 
 | Key | Effect |
 |---|---|
-| `Project:` | The project's name in MemoryCentral. Without it, the name comes from the repository folder. Setting it also tells apart two repositories with the same folder name. |
+| `Name:` | The project's name in MemoryCentral. Without it, the name comes from the repository folder. Setting it also tells apart two repositories with the same folder name. `Project:` works too. |
 | `Description:` | One sentence, shown in `list_projects` and on the dashboard |
 | `Stack:` | Comma-separated tags (lowercase), used by `find_by_stack` and the dashboard's grouping |
-| `Use:` | Not read by MemoryCentral. It is there for the AI tool, which follows it. |
+
+## Older forms
+
+Still read, so nothing needs migrating in a hurry:
+
+- **`## MemoryCentral`**, the block's name until 2026-10-10. Its `Project:`, `Description:` and `Stack:` lines work as before. Its `Use:` line is ignored and can be deleted. If a file has both headings, `## Project` wins.
+- **A bare `## Stack` section** supplies the stack (see below).
 
 ## Where a project's description comes from
 

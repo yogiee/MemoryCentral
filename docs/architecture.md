@@ -6,7 +6,7 @@ This page describes every component and how they fit together. Topic guides:
 
 - [connecting-apps.md](connecting-apps.md): registering MemoryCentral in each AI tool
 - [mcp-tools.md](mcp-tools.md): what each tool does
-- [project-block.md](project-block.md): the per-project `## MemoryCentral` block
+- [project-block.md](project-block.md): the per-project `## Project` block
 - [storage-and-retention.md](storage-and-retention.md): where files live and when anything is removed
 - [configuration.md](configuration.md): settings and environment variables
 - [troubleshooting.md](troubleshooting.md)
@@ -147,7 +147,7 @@ The models were chosen by measurement on a real corpus. See [embedding-eval-2026
 
 A project's name, description and stack come from, in order:
 
-1. its `## MemoryCentral` block;
+1. its `## Project` block (or the older `## MemoryCentral` one);
 2. an AI tool, via `set_project_info`;
 3. optionally, a local Ollama model (`extract.js`), off by default and turned on in Settings, which only fills gaps;
 4. its README.

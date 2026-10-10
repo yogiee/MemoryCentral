@@ -59,7 +59,7 @@ const files = n => Object.fromEntries(Array.from({ length: n }, (_, i) => [`note
 
 test('ingests harness memories; the project block names and describes the project', async () => {
   claudeProject('app', { 'a.md': '# A\n\nalpha', 'MEMORY.md': '- index', '_draft.md': 'x' },
-    '## MemoryCentral\nProject: Billing App\nDescription: Invoices and payments.\nStack: node, postgres');
+    '## Project\nName: Billing App\nDescription: Invoices and payments.\nStack: node, postgres');
   const s = await sync();
   assert.equal(s.added, 1, 'MEMORY.md and _-prefixed files are not memories');
   const p = db.prepare('SELECT * FROM projects').get();
@@ -332,7 +332,7 @@ test('when turned on it fills gaps only, and re-runs only when memories change',
   try {
     mods.setSetting(db, 'extract.enabled', true);
     const { mem } = claudeProject('chats', { 'a.md': 'alpha' });
-    claudeProject('declared', { 'b.md': 'beta' }, '## MemoryCentral\nDescription: Declared.\nStack: go');
+    claudeProject('declared', { 'b.md': 'beta' }, '## Project\nDescription: Declared.\nStack: go');
     await sync();
     const p = n => ({ ...db.prepare('SELECT description, stack, meta_source FROM projects WHERE name=?').get(n) });
     assert.deepEqual(p('chats'), { description: 'Guessed from memories.', stack: '["node"]', meta_source: 'auto' }, 'out-of-allowlist tags dropped');
@@ -362,7 +362,7 @@ test('a description set by an AI tool beats auto-extraction; a block beats both'
     assert.deepEqual(p, { description: 'Set by the agent.', stack: '["swift"]', meta_source: 'agent' });
     assert.equal(calls.length, 0, 'no extraction for a project an AI tool described');
 
-    writeFileSync(join(repo, 'AGENTS.md'), '## MemoryCentral\nDescription: From the block.\n');
+    writeFileSync(join(repo, 'AGENTS.md'), '## Project\nDescription: From the block.\n');
     await sync();
     p = { ...db.prepare('SELECT description, meta_source FROM projects WHERE name=?').get('app') };
     assert.deepEqual(p, { description: 'From the block.', meta_source: 'block' });

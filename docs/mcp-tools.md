@@ -32,7 +32,7 @@ Projects using a technology (`node`, `swift`, `laravel`…), from each project's
 ### `save_memory(project, filename, content, project_path?)`
 Creates or updates a memory.
 
-- **`project`:** the `Project:` line of the repository's [MemoryCentral block](project-block.md) if it has one, otherwise the repository folder name. A new project is created automatically.
+- **`project`:** the `Name:` line of the repository's [`## Project` block](project-block.md) if it has one, otherwise the repository folder name. A new project is created automatically.
 - **`filename`:** a plain `.md` name such as `feedback_testing.md`, with no folders. Re-saving the same filename updates that memory in place, wherever it lives.
 - **`content`:** Markdown. Frontmatter with `name`, `description` and `type` is recommended. The type is one of `feedback`, `project`, `user` or `reference`.
 - **`project_path`:** the repository's absolute path, if known. It lets MemoryCentral read the project's block.
@@ -40,7 +40,7 @@ Creates or updates a memory.
 What's worth saving: what a future session couldn't work out from the code or git history. That means the reason behind a decision, a fix's root cause, a constraint from outside the code, or a user preference. Routine changes are not worth saving.
 
 ### `set_project_info(project, description?, stack?, project_path?)`
-Describes a project: one sentence and lowercase stack tags. AI tools are asked to use it when the project they're working in has no description. A [MemoryCentral block](project-block.md) in the repository takes precedence; the tool's reply says so when one exists.
+Describes a project: one sentence and lowercase stack tags. AI tools are asked to use it when the project they're working in has no description. A [`## Project` block](project-block.md) in the repository takes precedence; the tool's reply says so when one exists.
 
 ### `delete_memory(project, filename)`
 Permanently removes a memory that is wrong or no longer true, along with its file. Use it only when the user wants the memory gone. To correct a memory, `save_memory` the same filename instead.

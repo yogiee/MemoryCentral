@@ -2,14 +2,10 @@
 
 One memory for every project and every AI tool on this machine: a harness-agnostic MCP server plus a local dashboard.
 
-## Stack
-node, sqlite, mcp, javascript
-
-## MemoryCentral
-Project: MemoryCentral
+## Project
+Name: MemoryCentral
 Description: Harness-agnostic memory for every project and AI tool: an MCP server, SQLite index and local dashboard.
 Stack: node, sqlite, mcp, javascript
-Use: Before a feature, fix or research task, check MemoryCentral for prior work (find_similar with a one-line task; find_by_stack per Stack tag). Save decisions, fixes and gotchas with save_memory (project "MemoryCentral").
 
 ## Purpose
 
@@ -25,7 +21,7 @@ Full description in `docs/architecture.md`. The short version:
 - **Writes** (`server/store.js`): `save_memory` creates projects and updates an existing memory where it lives (no forked copies); `delete_memory` is the deliberate delete.
 - **Settings** live in the DB (`server/settings.js`), shared by every process, re-read on a 10 s TTL. Precedence: env > DB > platform default.
 - **Embeddings** (`server/embed.js`, `server/models.js`): engine `ollama` or `local` (transformers.js), chosen in onboarding, never auto-switched. Every model in `models.js` carries its prompt convention, options, MLX-only flag and chunk size. The vector-space id encodes all of them, so a change re-embeds via the backlog. Ollama models chunk at 1,500 chars. **Bump `MODELS_REVISION` in models.js for any code change that alters a vector space**: older running servers then go `stale_code` instead of reverting the table. Ollama defaults: `embeddinggemma-2:270m-bf16-text` on Apple Silicon with local Ollama, `embeddinggemma:300m` elsewhere (every v2 tag is MLX). Rationale: `docs/embedding-eval-2026-10-09.md`.
-- **Project metadata** precedence: `## MemoryCentral` block > `set_project_info` from an AI tool > optional Ollama auto-description (`server/extract.js`, OFF by default, user-enabled in Settings, only fills gaps, re-runs only on changed memories) > README fallback. `projects.meta_source` records which won.
+- **Project metadata** precedence: `## Project` block (older `## MemoryCentral` still read; tool-neutral by design, no MC instructions in it) > `set_project_info` from an AI tool > optional Ollama auto-description (`server/extract.js`, OFF by default, user-enabled in Settings, only fills gaps, re-runs only on changed memories) > README fallback. `projects.meta_source` records which won.
 - **MCP server** (`server/index.js`): harness-neutral `instructions` (`server/instructions.js`, 512-char self-contained lead, ≤2,048 total), tools in `docs/mcp-tools.md`.
 - **Dashboard** (`server/dashboard.js`, `server/setupApi.js`, `server/public/`): browse, onboarding, settings. Every request must carry a localhost Host header; every write needs the per-launch token. `node setup.js` serves it standalone.
 

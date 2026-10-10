@@ -22,7 +22,7 @@ Tools:
 - set_project_info(project, description, stack): if the project you are working in shows no description, set one.
 
 Conventions:
-- Project name: the "Project:" line of the repository's "## MemoryCentral" block (in AGENTS.md, CLAUDE.md, \
+- Project name: the "Name:" line of the repository's "## Project" block (in AGENTS.md, CLAUDE.md, \
 .github/copilot-instructions.md or GEMINI.md) if it has one, otherwise the repository folder name. Pass project_path when you know it.
 - One memory per file, a descriptive snake_case filename ending in .md, and frontmatter with name, description and type \
 (feedback | project | user | reference).

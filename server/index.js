@@ -269,10 +269,10 @@ server.tool(
   'Save a memory (a decision, fix, gotcha or reference) to a project so any future session, in any AI tool, can find it. ' +
   'Creates the project if it is new. Re-saving a filename updates that memory in place.',
   {
-    project:      z.string().describe("Project name: the `Project:` line of the repo's MemoryCentral block if it has one, else the repo folder name"),
+    project:      z.string().describe("Project name: the `Name:` line of the repo's `## Project` block if it has one, else the repo folder name"),
     filename:     z.string().describe('Memory filename, e.g. "feedback_auth.md" or "project_decisions.md" (a plain .md name, no folders)'),
     content:      z.string().describe('Full markdown content; frontmatter with name/description/type is recommended'),
-    project_path: z.string().optional().describe("Absolute path of the project's repository, if known (lets MemoryCentral read its MemoryCentral block)"),
+    project_path: z.string().optional().describe("Absolute path of the project's repository, if known (lets MemoryCentral read its `## Project` block)"),
   },
   async ({ project, filename, content, project_path }) => {
     const r = await saveMemory(db, { project, filename, content, projectPath: project_path ?? null });
@@ -288,7 +288,7 @@ server.tool(
 server.tool(
   'set_project_info',
   "Describe a project: a one-sentence description and stack tags, shown in list_projects and used by find_by_stack. " +
-  "Use it when the project you are working in has no description. A MemoryCentral block in the repo's instructions file takes precedence.",
+  "Use it when the project you are working in has no description. A `## Project` block in the repo's instructions file takes precedence.",
   {
     project:      z.string().describe('Project name, as in save_memory'),
     description:  z.string().optional().describe('One sentence: what the project is or does'),
@@ -298,7 +298,7 @@ server.tool(
   async ({ project, description, stack, project_path }) => {
     const r = setProjectInfo(db, { project, description, stack, projectPath: project_path ?? null });
     if (!r.ok) return { content: [{ type: 'text', text: `Not saved: ${r.reason}` }], isError: true };
-    const note = r.overriddenBy ? ` Note: the project's MemoryCentral block in ${r.overriddenBy} takes precedence — edit that to change it.` : '';
+    const note = r.overriddenBy ? ` Note: the project's "## Project" block in ${r.overriddenBy} takes precedence — edit that to change it.` : '';
     return { content: [{ type: 'text', text: `Saved project info for ${project}.${note}` }] };
   },
 );

@@ -28,7 +28,7 @@ before(async () => {
   tmp = mkdtempSync(join(tmpdir(), 'mc-e2e-'));
   const repo = join(tmp, 'repos', 'webapp');
   mkdirSync(repo, { recursive: true });
-  writeFileSync(join(repo, 'CLAUDE.md'), '# webapp\n\n## MemoryCentral\nProject: webapp\nDescription: A web app.\nStack: node, react\n');
+  writeFileSync(join(repo, 'CLAUDE.md'), '# webapp\n\n## Project\nName: webapp\nDescription: A web app.\nStack: node, react\n');
   const mem = join(tmp, 'claude', repo.replace(/[/\\]/g, '-'), 'memory');
   mkdirSync(mem, { recursive: true });
   writeFileSync(join(mem, 'feedback_caching.md'), '---\nname: caching rule\ntype: feedback\n---\nAlways set Cache-Control on API responses.');

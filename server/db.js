@@ -160,7 +160,7 @@ function initSchema(db) {
 }
 
 // Where a project's description came from, so a guess never overwrites a deliberate
-// value: 'block' (its MemoryCentral block), 'agent' (an AI tool via set_project_info),
+// value: 'block' (its `## Project` block), 'agent' (an AI tool via set_project_info),
 // 'auto' (optional Ollama extraction), 'readme' (fallback), 'legacy' (pre-2026-10-09,
 // from the old always-on extraction — kept until something better arrives).
 function migrateMetaSource(db) {
@@ -228,7 +228,7 @@ function migrateToSources(db) {
     if (!cols.has('content_hash')) db.exec("ALTER TABLE memories ADD COLUMN content_hash TEXT DEFAULT ''");
     const pcols = new Set(db.prepare("SELECT name FROM pragma_table_info('projects')").all().map(c => c.name));
     if (!pcols.has('repo_path')) db.exec('ALTER TABLE projects ADD COLUMN repo_path TEXT');
-    // Which instructions file carried the project's MemoryCentral block (NULL = none).
+    // Which instructions file carried the project's `## Project` block (NULL = none).
     if (!pcols.has('meta_file')) db.exec('ALTER TABLE projects ADD COLUMN meta_file TEXT');
     db.exec('CREATE INDEX IF NOT EXISTS idx_memories_source ON memories(source_id)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_memories_content_hash ON memories(content_hash)');

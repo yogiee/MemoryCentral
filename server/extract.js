@@ -1,7 +1,7 @@
 // Optional: describe projects automatically with a local Ollama model.
 //
 // Off by default; the user turns it on in Settings (it downloads a model). It only
-// fills gaps: a project's own MemoryCentral block, or a description an AI tool set
+// fills gaps: a project's own `## Project` block, or a description an AI tool set
 // with set_project_info, always wins (see ingest.js refreshProjectMeta). It suits
 // memory that isn't organised around repositories — an app with free-form chats,
 // say — where no instructions file exists to carry a block.

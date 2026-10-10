@@ -91,7 +91,7 @@ export function buildManifest(generatedISO, { extractModel = null } = {}) {
       // Kept so BenchLLAMA's history reads right: granite4.2:3b leaving models_in_use is
       // deliberate, not drift — it may now be dropped from the fleet as far as we care.
       extract: 'Optional since 2026-10-09 (off by default; the user turns it on in Settings). ' +
-               'Project metadata comes first from each project\'s "## MemoryCentral" block, then from ' +
+               'Project metadata comes first from each project\'s "## Project" block, then from ' +
                'AI tools via set_project_info; extraction only fills gaps. When off, no extract model ' +
                'is in use — its absence from models_in_use is deliberate.',
     },

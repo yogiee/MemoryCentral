@@ -83,4 +83,4 @@ Any app that supports local (stdio) MCP servers takes the same command and argum
 
 ## Getting the AI to use it
 
-Connecting makes the tools available. To have the AI reach for them without being asked, MemoryCentral sends instructions to every app that supports them. For per-project guidance, add a [MemoryCentral block](project-block.md) to the instructions file your tool reads.
+Connecting makes the tools available. To have the AI reach for them without being asked, MemoryCentral sends instructions to every app that supports them. For per-project guidance, add a [project block](project-block.md) to the instructions file your tool reads.

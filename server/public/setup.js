@@ -481,7 +481,7 @@ function extractPanel(status, refresh) {
   var x = status.extract;
   var panel = el('section', { class: 'ov-panel' },
     el('div', { class: 'panel-head' }, el('div', { class: 'panel-title' }, 'Project descriptions')),
-    el('p', { class: 'muted' }, 'A project\'s name, description and stack come from, in order: its MemoryCentral block, then what an AI tool working in it set (set_project_info), then — if you turn it on — an automatic description by a local model, then its README.'));
+    el('p', { class: 'muted' }, 'A project\'s name, description and stack come from, in order: its ## Project block, then what an AI tool working in it set (set_project_info), then — if you turn it on — an automatic description by a local model, then its README.'));
   if (!x.available) {
     panel.appendChild(el('p', { class: 'muted small' }, 'Automatic descriptions need Ollama as the search engine.'));
     return panel;
@@ -522,7 +522,7 @@ function extractPanel(status, refresh) {
     } }, x.installed ? 'Turn on' : 'Download ' + fmtMB(x.suggested.sizeMB * 1e6) + ' and turn on');
     var cancel = el('button', { class: 'btn btn-ghost', onclick: function() { box.checked = false; detail.innerHTML = ''; } }, 'Cancel');
     detail.appendChild(el('div', { class: 'notice notice-ok' },
-      el('p', {}, 'When a project has no MemoryCentral block and no description set by an AI tool, a small local model (' + x.suggested.label + ', ' + x.model + ') reads the start of its memories and writes a one-sentence description and stack tags. Useful for apps whose memory isn\'t organised around repositories.'),
+      el('p', {}, 'When a project has no ## Project block and no description set by an AI tool, a small local model (' + x.suggested.label + ', ' + x.model + ') reads the start of its memories and writes a one-sentence description and stack tags. Useful for apps whose memory isn\'t organised around repositories.'),
       el('ul', { class: 'choice-points' },
         el('li', {}, 'Runs locally in Ollama after a sync, only for projects whose memories changed — about 1–3 seconds each.'),
         el('li', {}, x.installed ? 'The model is already installed.' : 'Downloads the model once: about ' + fmtMB(x.suggested.sizeMB * 1e6) + '.'),

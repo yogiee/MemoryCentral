@@ -127,7 +127,7 @@ The repository contains only the engine. No personal data is ever committed.
 | [Architecture](docs/architecture.md) | every component and how they fit together |
 | [Connecting apps](docs/connecting-apps.md) | Claude Code, VS Code, Codex, OpenCode, others |
 | [MCP tools](docs/mcp-tools.md) | what each tool does |
-| [Project blocks](docs/project-block.md) | the per-project `## MemoryCentral` block |
+| [Project blocks](docs/project-block.md) | the per-project `## Project` block |
 | [Using MemoryCentral well](docs/usage.md) | what to save, how to search |
 | [Storage and retention](docs/storage-and-retention.md) | where memories live and when anything is removed |
 | [Configuration](docs/configuration.md) | settings and environment variables |

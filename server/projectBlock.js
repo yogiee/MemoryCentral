@@ -1,21 +1,23 @@
 // Project metadata from the project itself, not from a model.
 //
-// A project declares its MemoryCentral identity in whichever instructions file
-// its harness reads, with a short block:
+// A project declares its name, description and stack in whichever instructions
+// file its harness reads, with a short block:
 //
-//   ## MemoryCentral
-//   Project: MemoryCentral
+//   ## Project
+//   Name: MemoryCentral
 //   Description: Central memory index and dashboard for all local AI-coding projects.
 //   Stack: node, sqlite, mcp, javascript
-//   Use: Before a feature, fix or research task, check MemoryCentral for prior work …
 //
-// The same block that tells MemoryCentral what the project is also tells the
-// harness to use MemoryCentral, because harnesses load these files into every
-// session. It replaced the LLM extraction step (2026-10-09), which needed Ollama,
-// ran on every sync, and guessed.
+// The block is deliberately tool-neutral: it describes the project to any agent
+// or person who opens the repo, whether or not they run MemoryCentral, so it is
+// never dead weight in someone else's context. Telling an agent to *use*
+// MemoryCentral is the MCP server's instructions' job (instructions.js) — they
+// reach exactly the agents that have it connected. It replaced the LLM
+// extraction step (2026-10-09), which needed Ollama, ran on every sync, and guessed.
 //
-// The pre-block convention — a bare `## Stack` section — is still read, so every
-// project that has one keeps its stack.
+// Older names are still read: the `## MemoryCentral` heading the block had until
+// 2026-10-10 (its `Use:` line is ignored), and the pre-block convention — a bare
+// `## Stack` section — so every project that has one keeps its stack.
 
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
@@ -29,7 +31,10 @@ export const INSTRUCTION_FILES = [
   'GEMINI.md',                         // Gemini CLI
 ];
 
-const KEYS = { project: 'project', name: 'project', description: 'description', stack: 'stack', use: 'use' };
+const KEYS = { name: 'project', project: 'project', description: 'description', stack: 'stack' };
+
+// The block's heading, current name first. A file with both uses `## Project`.
+const BLOCK_HEADINGS = ['Project', 'MemoryCentral'];
 
 // The block body: everything after the heading up to the next heading of the same
 // or higher level. Level 2 or deeper only — a file whose H1 title happens to be the
@@ -48,7 +53,7 @@ export function parseBlock(body) {
   const out = {};
   for (const raw of body.split('\n')) {
     // The colon is required (inside or outside the bold) so a prose line that
-    // happens to start with "Use" or "Project" is not read as a key.
+    // happens to start with "Name" or "Project" is not read as a key.
     const m = raw.trim().replace(/^[-*]\s+/, '').match(/^\**\s*([A-Za-z]+)\s*(?::\**|\**\s*:)\s*(.*)$/);
     if (!m) continue;
     const key = KEYS[m[1].toLowerCase()];
@@ -125,15 +130,19 @@ export function fallbackDescription(repoPath) {
 // found, so the dashboard can say "from AGENTS.md" or "no block yet".
 export function readProjectMeta(repoPath) {
   if (!repoPath) return null;
-  const meta = { file: null, project: null, description: null, stack: null, use: null };
+  const meta = { file: null, project: null, description: null, stack: null };
   for (const name of INSTRUCTION_FILES) {
     const path = join(repoPath, name);
     if (!existsSync(path)) continue;
     let src;
     try { src = readFileSync(path, 'utf8'); } catch { continue; }
-    if (!meta.file) {
-      const body = section(src, 'MemoryCentral');
-      if (body != null) Object.assign(meta, parseBlock(body), { file: name });
+    // `## Project` is a common heading, so it counts as the block only when it
+    // carries at least one key — a prose section of that name is passed over.
+    for (const heading of BLOCK_HEADINGS) {
+      if (meta.file) break;
+      const body = section(src, heading);
+      const block = body == null ? {} : parseBlock(body);
+      if (Object.keys(block).length) Object.assign(meta, block, { file: name });
     }
     if (!meta.stack) meta.stack = legacyStack(src);
   }
@@ -143,10 +152,9 @@ export function readProjectMeta(repoPath) {
 // The block MemoryCentral suggests for a project, prefilled from what it knows.
 export function suggestBlock({ name, description, stack }) {
   return [
-    '## MemoryCentral',
-    `Project: ${name}`,
+    '## Project',
+    `Name: ${name}`,
     `Description: ${description || '<one sentence: what this project is>'}`,
     `Stack: ${stack?.length ? stack.join(', ') : '<comma-separated tags, e.g. node, sqlite>'}`,
-    `Use: Before a feature, fix or research task, check MemoryCentral for prior work (find_similar with a one-line task; find_by_stack per Stack tag). Save decisions, fixes and gotchas with save_memory (project "${name}").`,
   ].join('\n');
 }

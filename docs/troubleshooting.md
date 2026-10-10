@@ -15,8 +15,9 @@ Start with the dashboard (`node setup.js`, then **Settings**). It shows:
 
 ## The AI has the tools but doesn't use them
 
-- Check that the app supports MCP server instructions; Claude Code, Codex and VS Code do. Otherwise, rely on the project block.
-- Add the [project block](project-block.md) to the instructions file the tool reads. Its `Use:` line is what makes the tool check MemoryCentral before working.
+- Check that the app supports MCP server instructions; Claude Code, Codex and VS Code do.
+- If it doesn't, add one line to the app's own user-level instructions: "Before a feature, fix or research task, check MemoryCentral for prior work." Keep it out of the repository, where it would reach people who don't run MemoryCentral.
+- Add the [project block](project-block.md) so the AI knows the project's stack tags for `find_by_stack`.
 
 ## Answers say "setup isn't finished"
 

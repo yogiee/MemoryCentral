@@ -134,5 +134,5 @@ elsewhere, none on the built-in engine), plus the `requirements-fit` policy + `r
 inform EMB-battery tuning. Implemented in BenchLLAMA's `consumers.py` (confirmed 2026-08-23).
 
 **2026-10-09:** the `extract` assignment is gone. Project metadata now comes from a declarative
-`## MemoryCentral` block (`server/projectBlock.js`); `granite4.2:3b` (and before it `gemma4:e4b-mlx`) is no
+`## MemoryCentral` block (`server/projectBlock.js`; renamed `## Project` on 2026-10-10); `granite4.2:3b` (and before it `gemma4:e4b-mlx`) is no
 longer used by MemoryCentral, and the rationale says so, so its drop from `models_in_use` reads as deliberate.

@@ -10,7 +10,7 @@ MemoryCentral does two jobs:
 Three layers, from broadest to most specific:
 
 1. **Server instructions.** These are automatic. Every app that supports MCP server instructions (Claude Code, Codex, VS Code) is told to search MemoryCentral before implementing, fixing or researching, and to save what it learns.
-2. **The project block.** Add one per project ([project-block.md](project-block.md)). Its `Stack:` line lets the AI search for prior work on the same technologies (`find_by_stack`). Its `Use:` line is the per-project nudge, read with the project's own instructions in every session.
+2. **The project block.** Add one per project ([project-block.md](project-block.md)). Its `Stack:` line lets the AI search for prior work on the same technologies (`find_by_stack`). It stays tool-neutral, so a repository you share carries no MemoryCentral-specific instructions. For an app that doesn't read server instructions, put the nudge ("check MemoryCentral before a feature, fix or research task") in that app's own user-level instructions, not in the repository.
 3. **Your own words.** "How did we do X before?" or "check MemoryCentral for…" always works.
 
 ## What to save
