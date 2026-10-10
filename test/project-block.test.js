@@ -60,6 +60,15 @@ test('the legacy "## Stack" block still supplies the stack', () => {
   try { assert.deepEqual(readProjectMeta(dir).stack, ['swift', 'uikit']); } finally { rmSync(dir, { recursive: true }); }
 });
 
+test('legacy "## Stack": a comma line is the tag list; bullets count only when there is none', () => {
+  const both = repo({ 'CLAUDE.md': '## Stack\npython, mcp, ollama\n\n- Python 3.11+\n- `mcp` — MCP SDK\n- Requires Ollama running at localhost\n' });
+  const list = repo({ 'CLAUDE.md': '## Stack\n- Python 3.11+\n- `fastapi` web layer\n\n```bash\npip install fastapi\n```\n\n**Optional** (skipped if absent, never fails):\n- `node` → JS grading\n' });
+  try {
+    assert.deepEqual(readProjectMeta(both).stack, ['python', 'mcp', 'ollama']);
+    assert.deepEqual(readProjectMeta(list).stack, ['python', 'fastapi', 'node'], 'fenced code and prose lines are not tags');
+  } finally { for (const d of [both, list]) rmSync(d, { recursive: true }); }
+});
+
 test('fallback description: README prose, skipping frontmatter, rules, badges, boilerplate; markdown stripped', () => {
   const dir = repo({
     'README.md': '---\ntitle: x\n---\n# App\n\n[![ci](b.svg)](x)\n\n---\n\nA **fast** tool for [tracking](http://x) things across devices.\n',

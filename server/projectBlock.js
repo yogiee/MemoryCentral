@@ -73,19 +73,22 @@ function parseStack(candidates) {
 }
 
 // The legacy `## Stack` section: one comma line (`node, sqlite, mcp`), or a list
-// whose items' leading tokens are the tags (`- Python 3.11+` → python).
+// whose items' leading tokens are the tags (`- Python 3.11+` → python). When a
+// comma line is there, it is the tag list and any bullets under it are prose
+// about the stack — their leading words are not tags (`- Requires Ollama
+// running…` made OllamaMCP's stack read "requires", 2026-10-10). Fenced code is
+// install commands, not tags (a "```bash" fence read as the tag "bash").
 function legacyStack(src) {
   const body = section(src, 'Stack');
   if (body == null) return null;
-  const candidates = [];
-  for (const raw of body.split('\n')) {
-    const line = raw.trim();
-    if (!line) continue;
+  const lines = body.replace(/```[\s\S]*?```/g, '').split('\n').map(l => l.trim()).filter(Boolean);
+  const bullets = [], plain = [];
+  for (const line of lines) {
     const bullet = line.match(/^[-*]\s+(.*)/);
-    if (bullet) candidates.push(bullet[1].replace(/`/g, '').split(/\s+/)[0]);
-    else candidates.push(...line.split(','));
+    if (bullet) bullets.push(bullet[1].replace(/`/g, '').split(/\s+/)[0]);
+    else plain.push(...line.split(','));
   }
-  return parseStack(candidates);
+  return parseStack(plain) || parseStack(bullets);
 }
 
 // The first paragraph of a file that reads like prose — the description of last
