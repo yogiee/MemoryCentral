@@ -381,4 +381,26 @@ test('a known folder keeps its project name; a block rename moves its memories a
   await sync();
   assert.equal(live('Billing').length, 2, 'an explicit Project: line renames, memories follow');
   assert.equal(db.prepare("SELECT COUNT(*) n FROM memories_fts WHERE project_name='Billing'").get().n, 2);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM projects WHERE name='legacy-name'").get().n, 0, 'no empty shell left behind');
+});
+
+test('a block rename takes tombstones along and keeps an old project that still has other sources', async () => {
+  const { repo, mem } = claudeProject('app', { 'a.md': 'alpha', 'b.md': 'beta', 'c.md': 'gamma', 'd.md': 'delta' });
+  await sync();
+  unlinkSync(join(mem, 'd.md'));
+  assert.equal((await sync()).tombstoned, 1);
+  // A second folder, from another repo, that belongs to the old name (as two
+  // checkouts of one project do).
+  claudeProject('app-2', { 'x.md': 'kept' });
+  await sync();
+  db.prepare(`UPDATE memories SET project_id=(SELECT id FROM projects WHERE name='app')
+              WHERE project_id=(SELECT id FROM projects WHERE name='app-2')`).run();
+  db.prepare(`UPDATE sources SET project_id=(SELECT id FROM projects WHERE name='app')
+              WHERE project_id=(SELECT id FROM projects WHERE name='app-2')`).run();
+
+  writeFileSync(join(repo, 'AGENTS.md'), '## Project\nName: Billing\n');
+  await sync();
+  const billing = db.prepare("SELECT id FROM projects WHERE name='Billing'").get().id;
+  assert.deepEqual(tombs().map(t => t.project_id), [billing], 'a restore lands under the new name');
+  assert.deepEqual(live('app').map(m => m.filename), ['x.md'], 'still holds the other folder');
 });

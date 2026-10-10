@@ -56,7 +56,9 @@ export function ensureProject(db, name, { repoPath = null, kind = 'native', now 
 
 // A folder that moves to a different project (a block's `Name:` line renamed
 // it) takes its memories along; leaving them behind would split one project's
-// memories across two names.
+// memories across two names. Its tombstones go too, so a restore lands under the
+// new name, and the old project is dropped once nothing is left in it: a shell
+// with the old name would otherwise sit beside the new one for good.
 export function ensureSource(db, projectId, kind, root) {
   const before = db.prepare('SELECT id, project_id FROM sources WHERE kind=? AND root=?').get(kind, root);
   db.prepare(`
@@ -71,6 +73,13 @@ export function ensureSource(db, projectId, kind, root) {
       db.prepare('UPDATE memories SET project_id=? WHERE id=?').run(projectId, m.id);
       db.prepare('UPDATE memories_fts SET project_name=? WHERE rowid=?').run(name, m.id);
     }
+    db.prepare('UPDATE memory_tombstones SET project_id=? WHERE source_id=?').run(projectId, source.id);
+    db.prepare(`
+      DELETE FROM projects WHERE id=?
+        AND NOT EXISTS (SELECT 1 FROM memories WHERE project_id=?)
+        AND NOT EXISTS (SELECT 1 FROM sources WHERE project_id=?)
+        AND NOT EXISTS (SELECT 1 FROM memory_tombstones WHERE project_id=?)
+    `).run(before.project_id, before.project_id, before.project_id, before.project_id);
   }
   return source;
 }
